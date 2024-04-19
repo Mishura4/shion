@@ -1,0 +1,151 @@
+name: LibShion CI
+on:
+  push:
+    paths:
+      - '**Dockerfile'
+      - '**.cxx'
+      - '**.cpp'
+      - '**.h'
+      - '**.hpp'
+      - '**.cmake'
+      - '**ci.yml'
+      - '**CMakeLists.txt'
+      - '!**/docpages/**' # Never allow docpages to build CI from doc PRs.
+  pull_request:
+    paths:
+      - '**Dockerfile'
+      - '**.cxx'
+      - '**.cpp'
+      - '**.h'
+      - '**.hpp'
+      - '**.cmake'
+      - '**ci.yml'
+      - '**CMakeLists.txt'
+      - '!**/docpages/**'
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    permissions:
+      contents: write
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.cfg.arch }}-(${{ matrix.cfg.package }}-${{ matrix.cfg.version }})
+      cancel-in-progress: true
+    name: Linux ${{matrix.cfg.arch}} (${{matrix.cfg.package}}-${{matrix.cfg.version}})
+    runs-on: ${{matrix.cfg.os}}
+    strategy:
+      fail-fast: false # Don't fail everything if one fails. We want to test each OS/Compiler individually
+      matrix:
+        # GitHub hosted runners on Azure
+        # arm7hf is a self-hosted docker-based runner at Brainbox.cc. Raspberry Pi 4, 8gb 4-core with NEON
+        cfg:
+          - { arch: 'amd64', concurrency: 2, os: ubuntu-22.04, package: 'clang++', cc: clang, version: 18, cpack: 'no', ctest: 'no', cmake-args: '-DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_EXE_LINKER_FLAGS="-lc++abi"' }
+          - { arch: 'amd64', concurrency: 2, os: ubuntu-22.04, package: 'g++', cc: gcc, version: 13, cpack: 'no', ctest: 'no', cmake-args: '' }
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Install apt packages
+        run: sudo sed -i 's/azure\.//' /etc/apt/sources.list && sudo apt update && sudo apt-get install -y pkg-config
+
+      - name: Install LLVM
+        if: ${{ matrix.cfg.package == 'clang++' }}
+        run: |
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo apt-add-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-${{ matrix.cfg.version }} main"
+          sudo apt update
+          sudo apt install -y llvm-${{ matrix.cfg.version }} llvm-${{ matrix.cfg.version }}-dev clang-${{ matrix.cfg.version }} libc++-${{ matrix.cfg.version }}-dev libc++abi-${{ matrix.cfg.version }}-dev
+
+      - name: Generate CMake
+        run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release ${{matrix.cfg.cmake-args}} ..
+        env:
+            CXX: ${{ matrix.cfg.package }}-${{ matrix.cfg.version }}
+            CC: ${{ matrix.cfg.cc }}-${{ matrix.cfg.version }}
+
+      - name: Build Project
+        run: cd build && make -j${{ matrix.cfg.concurrency }}
+
+      - name: Run unit tests
+        if: ${{ matrix.cfg.ctest == 'yes' }}
+        run: cd build && ctest -VV
+
+      - name: Package distributable
+        if: ${{ matrix.cfg.cpack == 'yes' }}
+        run: cd build && cpack --verbose
+
+      - name: Upload Binary (DEB)
+        if: ${{ matrix.cfg.cpack == 'yes' }}
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+        with:
+          name: "Shion - Debian Package ${{matrix.cfg.arch}}"
+          path: '${{github.workspace}}/build/*.deb'
+
+      - name: Upload Binary (RPM)
+        if: ${{ matrix.cfg.cpack == 'yes' }}
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+        with:
+          name: "Shion - RPM Package ${{matrix.cfg.arch}}"
+          path: '${{github.workspace}}/build/*.rpm'
+
+  windows: # Windows x64 and x86 build matrix
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false # Don't cancel other matrix jobs if one fails
+      matrix:
+        cfg:
+        - { name: 'x64',            arch: x64, config: Debug,   vs: '2022', os: 'windows-2022', vsv: '17', upload: true,  options: '' }
+        - { name: 'x64',            arch: x64, config: Release, vs: '2022', os: 'windows-2022', vsv: '17', upload: true,  options: '' }
+        - { name: 'x64-Clang',      arch: x64, config: Debug,   vs: '2022', os: 'windows-2022', vsv: '17', upload: false, options: '-T ClangCL' }
+        - { name: 'x64-Clang',      arch: x64, config: Release,   vs: '2022', os: 'windows-2022', vsv: '17', upload: false, options: '-T ClangCL' }
+
+    name: "Windows ${{matrix.cfg.name}}-${{matrix.cfg.config}}-vs${{matrix.cfg.vs}}"
+    runs-on: ${{matrix.cfg.os}}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          path: main
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2.0.0
+
+      - name: Install chocolatey packages ${{ matrix.cfg.arch }}
+        uses: crazy-max/ghaction-chocolatey@26a07047a2f86d84c769ce506c7632cef332379c # master
+        with:
+            args: install ninja
+
+      - name: Generate CMake (x64)
+        if: ${{ matrix.cfg.arch == 'x64' }}
+        run: mkdir main/build && cd main/build && cmake -G "Visual Studio ${{matrix.cfg.vsv}} ${{matrix.cfg.vs}}" ${{matrix.cfg.options}} ..
+
+      - name: Build Project
+        run: cmake --build main/build --target shion --config ${{matrix.cfg.config}} --parallel 2
+
+      #- name: Move debug files for packaging
+      #  if: ${{ matrix.cfg.config == 'Debug' }}
+      #  run: xcopy main\build\Debug\* main\build\Release\ /s /q
+
+      #- name: Package distributable
+      #  run: cd main/build && cpack --verbose
+      #  env:
+      #    DONT_RUN_VCPKG: true
+
+      #- name: Upload Binary
+      #  if: ${{ matrix.cfg.upload }}
+      #  uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+      #  with:
+      #    name: "Shion - Windows ${{matrix.cfg.name}}-${{matrix.cfg.config}}-vs${{matrix.cfg.vs}}"
+      #    path: '${{github.workspace}}/main/build/*.zip'
