@@ -1,10 +1,13 @@
-#ifndef SHION_WOW_GUILD_CACHE_H_
-#define SHION_WOW_GUILD_CACHE_H_
+#ifndef SHION_CACHE_H_
+#define SHION_CACHE_H_
 
 #include <atomic>
 #include <type_traits>
-
-#include "wow/guild.h"
+#include <mutex>
+#include <list>
+#include <cassert>
+#include <optional>
+#include <utility>
 
 namespace shion {
 
@@ -387,4 +390,4 @@ private:
 
 }
 
-#endif SHION_WOW_GUILD_CACHE_H_
+#endif SHION_CACHE_H_

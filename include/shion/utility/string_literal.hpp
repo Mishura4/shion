@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <utility>
 #include <span>
+#include <ranges>
+#include <string_view>
 
 namespace shion {
 
