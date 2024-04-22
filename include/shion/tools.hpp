@@ -41,4 +41,4 @@ class cache;
 
 }
 
-#endif SHION_TOOLS_TOOLS_H_
+#endif /* SHION_TOOLS_TOOLS_H_ */
