@@ -19,6 +19,7 @@ target_compile_definitions(shion PRIVATE SHION_BUILD)
 
 if (MSVC)
 	target_compile_options(shion PRIVATE /wd4100 /W4 /utf-8 /permissive- /wd4189)
+	target_compile_options(shion PUBLIC /wd4251)
 	target_compile_definitions(shion PRIVATE NOMINMAX)
 	if (NOT CLANG_CL)
 		target_compile_options(shion PUBLIC /Zc:preprocessor)

@@ -10,16 +10,16 @@ namespace shion {
 /**
  * @brief Base class for all exceptions thrown by the library.
  */
-class SHION_API exception : public std::exception {
+class exception : public std::exception {
 public:
-	exception() = default;
-	exception(const exception &) = default;
-	exception(exception&&) = default;
-	exception(const std::string &msg);
-	exception(std::string &&msg) noexcept;
+	SHION_API exception() = default;
+	SHION_API exception(const exception &) = default;
+	SHION_API exception(exception&&) = default;
+	SHION_API exception (const std::string &msg);
+	SHION_API exception(std::string &&msg) noexcept;
 
-	exception &operator=(const exception&) = default;
-	exception &operator=(exception&&) = default;
+	SHION_API exception& operator=(const exception&) = default;
+	SHION_API exception& operator=(exception&&) = default;
 
 	template <typename T, typename... Args>
 	exception(std::format_string<T, Args...> fmt, T&& arg1, Args&&... args) :
@@ -27,22 +27,22 @@ public:
 	{
 	}
 
-	const char *what() const noexcept override;
+	SHION_API auto what() const noexcept -> const char* override;
 
 private:
 	std::string _message;
 };
 
-class SHION_API internal_exception : public exception {
+class internal_exception : public exception {
 public:
 	using exception::operator=;
 
-	internal_exception(std::source_location loc = std::source_location::current());
-	internal_exception(const std::string &msg, std::source_location loc = std::source_location::current());
-	internal_exception(std::string &&msg, std::source_location loc = std::source_location::current());
+	SHION_API internal_exception(std::source_location loc = std::source_location::current());
+	SHION_API internal_exception(const std::string &msg, std::source_location loc = std::source_location::current());
+	SHION_API internal_exception(std::string &&msg, std::source_location loc = std::source_location::current());
 
-	const std::source_location &where() const noexcept;
-	std::string format() const;
+	SHION_API auto where() const noexcept -> const std::source_location&;
+	SHION_API auto format() const -> std::string;
 
 private:
 	std::source_location _where;

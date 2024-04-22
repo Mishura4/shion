@@ -5,10 +5,17 @@
 #include <functional>
 #include <optional>
 #include <memory>
+#include <cassert>
 
 #include "shion_essentials.hpp"
 
 namespace shion {
+
+#ifndef NDEBUG
+#  define SHION_ASSERT(a) assert(a)
+#else
+#  define SHION_ASSERT(a) if (!(a)) std::unreachable();
+#endif
 
 template <typename T, template<typename ...> class Of>
 inline constexpr bool is_specialization_v = false;
@@ -40,6 +47,23 @@ inline constexpr bool is_optional<std::optional<T>> = true;
 
 template <typename Key, typename Value, typename Hasher = std::hash<Key>, typename Equal = std::equal_to<>>
 class cache;
+
+/**
+ * @brief Casts an integer to another type, raising an assertion failure in debug if the target type cannot hold the value.
+ */
+template <std::integral To, std::integral From>
+constexpr To lossless_cast(From v) noexcept {
+	if constexpr (std::is_unsigned_v<From>) {
+		SHION_ASSERT(v <= static_cast<std::make_unsigned_t<To>>(std::numeric_limits<To>::max()));
+	} else {
+		if constexpr (std::is_unsigned_v<To>) {
+			SHION_ASSERT(v >= 0);
+		} else {
+			SHION_ASSERT(v >= std::numeric_limits<To>::min());
+		}
+	}
+	return static_cast<To>(v);
+}
 
 }
 
