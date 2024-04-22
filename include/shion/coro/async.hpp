@@ -1,5 +1,6 @@
 #pragma once
 
+#include "coro.hpp"
 #include "awaitable.hpp"
 
 namespace shion {
@@ -9,8 +10,6 @@ struct async_dummy : awaitable_dummy {
 };
 
 }
-
-#include "coro.hpp"
 
 #include <utility>
 #include <type_traits>

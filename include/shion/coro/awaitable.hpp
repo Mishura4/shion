@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "coro.hpp"
 #include "../shion_essentials.hpp"
 #include "../exception.hpp"
 
@@ -12,8 +13,6 @@ struct awaitable_dummy {
 };
 
 }
-
-#include "coro.hpp"
 
 #include <mutex>
 #include <utility>

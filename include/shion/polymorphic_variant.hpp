@@ -7,6 +7,8 @@
 
 #include "utility/type_list.hpp"
 
+#include "shion_essentials.hpp"
+
 namespace shion {
 
 template <typename Base, typename... Derived>

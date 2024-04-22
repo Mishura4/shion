@@ -9,6 +9,8 @@
 #include <optional>
 #include <utility>
 
+#include "shion_essentials.hpp"
+
 namespace shion {
 
 template <typename Value>

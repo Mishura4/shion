@@ -3,12 +3,14 @@
 #include <source_location>
 #include <format>
 
+#include "shion_essentials.hpp"
+
 namespace shion {
 
 /**
  * @brief Base class for all exceptions thrown by the library.
  */
-class exception : public std::exception {
+class SHION_API exception : public std::exception {
 public:
 	exception() = default;
 	exception(const exception &) = default;
@@ -31,7 +33,7 @@ private:
 	std::string _message;
 };
 
-class internal_exception : public exception {
+class SHION_API internal_exception : public exception {
 public:
 	using exception::operator=;
 

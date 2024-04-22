@@ -6,6 +6,8 @@
 #include <optional>
 #include <memory>
 
+#include "shion_essentials.hpp"
+
 namespace shion {
 
 template <typename T, template<typename ...> class Of>

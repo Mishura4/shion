@@ -4,19 +4,21 @@
 #include <utility>
 #include <type_traits>
 
+#include "../shion_essentials.hpp"
+
 namespace shion {
 
 template <typename T, typename... Args>
-constexpr bool pack_contains = false || (std::is_same_v<T, Args> || ...);
+inline constexpr bool pack_contains = false || (std::is_same_v<T, Args> || ...);
 
 template <typename... Args>
-constexpr bool is_unique = false;
+inline constexpr bool is_unique = false;
 
 template <>
-constexpr bool is_unique<> = true;
+inline constexpr bool is_unique<> = true;
 
 template <typename T, typename... Args>
-constexpr bool is_unique<T, Args...> = !pack_contains<T, Args...> && is_unique<Args...>;
+inline constexpr bool is_unique<T, Args...> = !pack_contains<T, Args...> && is_unique<Args...>;
 
 namespace detail {
 

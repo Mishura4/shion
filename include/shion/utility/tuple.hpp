@@ -4,6 +4,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "../shion_essentials.hpp"
+
 namespace shion {
 
 namespace detail {

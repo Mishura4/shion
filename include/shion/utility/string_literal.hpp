@@ -7,6 +7,8 @@
 #include <ranges>
 #include <string_view>
 
+#include "../shion_essentials.hpp"
+
 namespace shion {
 
 template <typename CharT, size_t N>

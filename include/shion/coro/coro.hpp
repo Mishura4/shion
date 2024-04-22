@@ -20,6 +20,8 @@ namespace std {
 #  include <coroutine>
 #endif
 
+#include "../shion_essentials.hpp"
+
 namespace shion {
 
 /**

@@ -8,11 +8,12 @@
 #include <memory>
 #include <utility>
 
+#include "shion_essentials.hpp"
 #include "coro/awaitable.hpp"
 
 namespace shion {
 
-class worker {
+class SHION_API worker {
 public:
 	worker() = default;
 	worker(const worker &) = delete;
