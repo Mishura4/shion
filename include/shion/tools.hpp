@@ -65,6 +65,11 @@ constexpr To lossless_cast(From v) noexcept {
 	return static_cast<To>(v);
 }
 
+template <typename T>
+constexpr auto construct = [](auto&&... args) noexcept(std::is_nothrow_constructible_v<T, decltype(args)...>) -> T requires (std::is_constructible_v<T, decltype(args)...>) {
+	return {std::forward<decltype(args)>(args)...};
+};
+
 }
 
 #endif /* SHION_TOOLS_TOOLS_H_ */
