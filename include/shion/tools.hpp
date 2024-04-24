@@ -65,9 +65,23 @@ constexpr To lossless_cast(From v) noexcept {
 	return static_cast<To>(v);
 }
 
+/**
+ * @brief Simple type constructor, forwarding its argument.
+ *
+ * Meant to be passed to standard library functions like std::ranges::transform.
+ */
 template <typename T>
-constexpr auto construct = [](auto&&... args) noexcept(std::is_nothrow_constructible_v<T, decltype(args)...>) -> T requires (std::is_constructible_v<T, decltype(args)...>) {
-	return {std::forward<decltype(args)>(args)...};
+constexpr auto construct = []<typename... Ts>(Ts&&... args) constexpr noexcept(std::is_nothrow_constructible_v<T, Ts...>) -> T requires (std::is_constructible_v<T, Ts...>) {
+	return T(std::forward<Ts>(args)...);
+};
+
+/**
+ * @brief Simple address getter.
+ *
+ * Meant to be passed to standard library functions like std::ranges::transform.
+ */
+constexpr auto address_of = [](auto&& value) constexpr noexcept {
+	return &value;
 };
 
 }
