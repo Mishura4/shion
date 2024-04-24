@@ -7,12 +7,30 @@
 
 namespace shion {
 
-namespace literals {
-
-using namespace std::string_view_literals;
-using namespace std::chrono_literals;
-
+[[noreturn]] inline void unreachable() {
+#ifdef _MSC_VER
+	__assume(false);
+#else
+	__builtin_unreachable();
+#endif
 }
+
+/**
+ * @brief In release, this returns a "default value". In debug, this calls std::unreachable.
+ */
+template <typename T = void>
+T safe_unreachable() {
+#ifndef NDEBUG
+	unreachable();
+#else
+	if constexpr (!std::is_void_v<T>) {
+		return T{};
+	} else {
+		return;
+	}
+#endif
+}
+
 
 namespace aliases {
 
@@ -46,6 +64,69 @@ using wall_duration = wall_clock::duration;
 }
 
 using namespace aliases;
+
+namespace literals {
+
+using namespace std::string_view_literals;
+using namespace std::chrono_literals;
+
+consteval int8 operator""_i8(unsigned long long int lit) {
+	if (lit > std::numeric_limits<int8>::max()) {
+		unreachable();
+	}
+	return static_cast<int8>(lit);
+}
+
+consteval int16 operator""_i16(unsigned long long int lit) {
+	if (lit > std::numeric_limits<int16>::max()) {
+		unreachable();
+	}
+	return static_cast<int16>(lit);
+}
+
+consteval int32 operator""_i32(unsigned long long int lit) {
+	if (lit > std::numeric_limits<int32>::max()) {
+		unreachable();
+	}
+	return static_cast<int32>(lit);
+}
+
+consteval int64 operator""_i64(unsigned long long int lit) {
+	if (lit > std::numeric_limits<int64>::max()) {
+		unreachable();
+	}
+	return static_cast<int64>(lit);
+}
+
+consteval uint8 operator""_u8(unsigned long long int lit) {
+	if (lit > std::numeric_limits<uint8>::max()) {
+		unreachable();
+	}
+	return static_cast<uint8>(lit);
+}
+
+consteval uint16 operator""_u16(unsigned long long int lit) {
+	if (lit > std::numeric_limits<uint16>::max()) {
+		unreachable();
+	}
+	return static_cast<uint16>(lit);
+}
+
+consteval uint32 operator""_u32(unsigned long long int lit) {
+	if (lit > std::numeric_limits<uint32>::max()) {
+		unreachable();
+	}
+	return static_cast<uint32>(lit);
+}
+
+consteval uint64 operator""_u64(unsigned long long int lit) {
+	if (lit > std::numeric_limits<uint64>::max()) {
+		unreachable();
+	}
+	return static_cast<uint64>(lit);
+}
+
+}
 using namespace literals;
 
 struct version {
@@ -67,31 +148,6 @@ struct unreachable_result {
 		return {};
 	}
 };
-
-[[noreturn]] inline void unreachable() {
-#ifdef _MSC_VER
-	__assume(false);
-#else
-	__builtin_unreachable();
-#endif
-}
-
-/**
- * @brief In release, this returns a "default value". In debug, this calls std::unreachable.
- */
-template <typename T = void>
-T safe_unreachable() {
-#ifndef NDEBUG
-	unreachable();
-#else
-	if constexpr (!std::is_void_v<T>) {
-		return T{};
-	} else {
-		return;
-	}
-#endif
-}
-
 
 /**
  * @brief In release, this returns a "default value". In debug, this calls std::unreachable.

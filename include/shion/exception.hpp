@@ -15,7 +15,7 @@ public:
 	SHION_API exception() = default;
 	SHION_API exception(const exception &) = default;
 	SHION_API exception(exception&&) = default;
-	SHION_API exception (const std::string &msg);
+	SHION_API exception(const std::string &msg);
 	SHION_API exception(std::string &&msg) noexcept;
 
 	SHION_API exception& operator=(const exception&) = default;
@@ -53,6 +53,7 @@ private:
  * for example a bad object state for a library operation.
  */
 class logic_exception : public exception {
+public:
 	using exception::exception;
 	using exception::operator=;
 };

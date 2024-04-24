@@ -54,16 +54,21 @@ class cache;
  */
 template <std::integral To, std::integral From>
 constexpr To lossless_cast(From v) noexcept {
-	if constexpr (std::is_unsigned_v<From>) {
-		SHION_ASSERT(v <= static_cast<std::make_unsigned_t<To>>(std::numeric_limits<To>::max()));
-	} else {
-		if constexpr (std::is_unsigned_v<To>) {
-			SHION_ASSERT(v >= 0);
-		} else {
-			SHION_ASSERT(v >= std::numeric_limits<To>::min());
-		}
+	if constexpr (std::is_same_v<To, From>) {
+		return v;
 	}
-	return static_cast<To>(v);
+	else {
+		if constexpr (std::is_unsigned_v<From>) {
+			SHION_ASSERT(v <= static_cast<std::make_unsigned_t<To>>(std::numeric_limits<To>::max()));
+		} else {
+			if constexpr (std::is_unsigned_v<To>) {
+				SHION_ASSERT(v >= 0);
+			} else {
+				SHION_ASSERT(v >= std::numeric_limits<To>::min());
+			}
+		}
+		return static_cast<To>(v);
+	}
 }
 
 /**
@@ -103,6 +108,15 @@ constexpr auto to_impl = []<typename Rng, typename... Args>(Rng&& range, Args&&.
 	}
 	// idk, pray
 };
+
+template <typename T, typename U>
+constexpr bool same_type_value(T&& lhs, U&& rhs) noexcept {
+	if constexpr (!std::is_same_v<std::remove_cvref_t<T>, std::remove_cvref_t<U>>) {
+		return false;
+	} else {
+		return lhs == rhs;
+	}
+}
 
 /**
  * An attempt at https://en.cppreference.com/w/cpp/ranges/to
