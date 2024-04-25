@@ -1,0 +1,5 @@
+*.cpp		text working-tree-encoding=UTF-8
+*.hpp		text working-tree-encoding=UTF-8
+
+*.txt		text working-tree-encoding=UTF-8
+*.md		text working-tree-encoding=UTF-8

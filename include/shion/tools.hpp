@@ -45,28 +45,6 @@ template <typename Key, typename Value, typename Hasher = std::hash<Key>, typena
 class cache;
 
 /**
- * @brief Casts an integer to another type, raising an assertion failure in debug if the target type cannot hold the value.
- */
-template <std::integral To, std::integral From>
-constexpr To lossless_cast(From v) noexcept {
-	if constexpr (std::is_same_v<To, From>) {
-		return v;
-	}
-	else {
-		if constexpr (std::is_unsigned_v<From>) {
-			SHION_ASSERT(v <= static_cast<std::make_unsigned_t<To>>(std::numeric_limits<To>::max()));
-		} else {
-			if constexpr (std::is_unsigned_v<To>) {
-				SHION_ASSERT(v >= 0);
-			} else {
-				SHION_ASSERT(v >= std::numeric_limits<To>::min());
-			}
-		}
-		return static_cast<To>(v);
-	}
-}
-
-/**
  * @brief Simple type constructor, forwarding its argument.
  *
  * Meant to be passed to standard library functions like std::ranges::transform.

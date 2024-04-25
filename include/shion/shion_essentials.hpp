@@ -32,6 +32,12 @@ T safe_unreachable() {
 #endif
 }
 
+#ifndef NDEBUG
+#  define SHION_ASSERT(a) assert(a)
+#else
+#  define SHION_ASSERT(a) if (!(a)) unreachable();
+#endif
+
 
 namespace aliases {
 
@@ -64,6 +70,28 @@ using wall_duration = wall_clock::duration;
 
 }
 
+/**
+ * @brief Casts an integer to another type, raising an assertion failure in debug if the target type cannot hold the value.
+ */
+template <std::integral To, std::integral From>
+constexpr To lossless_cast(From v) noexcept {
+	if constexpr (std::is_same_v<To, From>) {
+		return v;
+	}
+	else {
+		if constexpr (std::is_unsigned_v<From>) {
+			SHION_ASSERT(v <= static_cast<std::make_unsigned_t<To>>(std::numeric_limits<To>::max()));
+		} else {
+			if constexpr (std::is_unsigned_v<To>) {
+				SHION_ASSERT(v >= 0);
+			} else {
+				SHION_ASSERT(v >= std::numeric_limits<To>::min());
+			}
+		}
+		return static_cast<To>(v);
+	}
+}
+
 using namespace aliases;
 
 namespace literals {
@@ -72,28 +100,28 @@ using namespace std::string_view_literals;
 using namespace std::chrono_literals;
 
 consteval int8 operator""_i8(unsigned long long int lit) {
-	if (lit > std::numeric_limits<int8>::max()) {
+	if (lit > lossless_cast<unsigned long long int>(std::numeric_limits<int8>::max())) {
 		unreachable();
 	}
 	return static_cast<int8>(lit);
 }
 
 consteval int16 operator""_i16(unsigned long long int lit) {
-	if (lit > std::numeric_limits<int16>::max()) {
+	if (lit > lossless_cast<unsigned long long int>(std::numeric_limits<int16>::max())) {
 		unreachable();
 	}
 	return static_cast<int16>(lit);
 }
 
 consteval int32 operator""_i32(unsigned long long int lit) {
-	if (lit > std::numeric_limits<int32>::max()) {
+	if (lit > lossless_cast<unsigned long long int>(std::numeric_limits<int32>::max())) {
 		unreachable();
 	}
 	return static_cast<int32>(lit);
 }
 
 consteval int64 operator""_i64(unsigned long long int lit) {
-	if (lit > std::numeric_limits<int64>::max()) {
+	if (lit > lossless_cast<unsigned long long int>(std::numeric_limits<int64>::max())) {
 		unreachable();
 	}
 	return static_cast<int64>(lit);
@@ -173,12 +201,6 @@ decltype(auto) safe_unreachable(T&& t [[maybe_unused]]) {
 	}
 #endif
 }
-
-#ifndef NDEBUG
-#  define SHION_ASSERT(a) assert(a)
-#else
-#  define SHION_ASSERT(a) if (!(a)) std::unreachable();
-#endif
 
 #ifdef SHION_SHARED_LIBRARY
 #  ifdef WIN32
