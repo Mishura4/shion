@@ -173,16 +173,16 @@ struct point2 {
 	 * @param other Point to get a vector to
 	 * @return Vector2 to the other point
 	 */
-	vector2<std::make_signed_t<T>> to(const point2& other) const noexcept {
-		using as_signed = std::make_signed_t<T>;
-
+	auto to(const point2& other) const noexcept {
 		if constexpr (std::is_unsigned_v<T>) {
-			return {
+			using as_signed = std::make_signed_t<T>;
+
+			return vector2<std::make_signed_t<T>>{
 				.x = (other.x > x ? static_cast<as_signed>(other.x - x) : -static_cast<as_signed>(x - other.x)),
 				.y = (other.y > y ? static_cast<as_signed>(other.y - y) : -static_cast<as_signed>(y - other.y)),
 			};
 		} else {
-			return {other.x - x, other.y - y};
+			return vector2{other.x - x, other.y - y};
 		}
 	}
 
@@ -192,16 +192,16 @@ struct point2 {
 	 * @param other Point to get a vector from
 	 * @return Vector2 from the other point
 	 */
-	vector2<T> from(const point2& other) const noexcept {
-		using as_signed = std::make_signed_t<T>;
-
+	auto from(const point2& other) const noexcept {
 		if constexpr (std::is_unsigned_v<T>) {
-			return {
+			using as_signed = std::make_signed_t<T>;
+
+			return vector2<std::make_signed_t<T>>{
 				.x = (other.x > x ? -static_cast<as_signed>(other.x - x) : static_cast<as_signed>(x - other.x)),
 				.y = (other.y > y ? -static_cast<as_signed>(other.y - y) : static_cast<as_signed>(y - other.y)),
 			};
 		} else {
-			return {x - other.x, y - other.y};
+			return vector2{x - other.x, y - other.y};
 		}
 	}
 
@@ -272,17 +272,17 @@ struct point3 {
 	 * @param other Point to get a vector to
 	 * @return Vector3 to the other point
 	 */
-	vector3<std::make_signed_t<T>> to(const point3& other) const noexcept {
-		using as_signed = std::make_signed_t<T>;
-
+	auto to(const point3& other) const noexcept {
 		if constexpr (std::is_unsigned_v<T>) {
-			return {
+			using as_signed = std::make_signed_t<T>;
+
+			return vector3<std::make_signed_t<T>>{
 				.x = (other.x > x ? static_cast<as_signed>(other.x - x) : -static_cast<as_signed>(x - other.x)),
 				.y = (other.y > y ? static_cast<as_signed>(other.y - y) : -static_cast<as_signed>(y - other.y)),
 				.z = (other.z > z ? static_cast<as_signed>(other.z - z) : -static_cast<as_signed>(z - other.z)),
 			};
 		} else {
-			return {other.x - x, other.y - y, other.z - z};
+			return vector3{other.x - x, other.y - y, other.z - z};
 		}
 	}
 
@@ -292,17 +292,17 @@ struct point3 {
 	 * @param other Point to get a vector from
 	 * @return Vector2 from the other point
 	 */
-	vector3<T> from(const point3& other) const noexcept {
-		using as_signed = std::make_signed_t<T>;
-
+	auto from(const point3& other) const noexcept {
 		if constexpr (std::is_unsigned_v<T>) {
-			return {
+			using as_signed = std::make_signed_t<T>;
+
+			return vector3<std::make_signed_t<T>>{
 				.x = (other.x > x ? -static_cast<as_signed>(other.x - x) : static_cast<as_signed>(x - other.x)),
 				.y = (other.y > y ? -static_cast<as_signed>(other.y - y) : static_cast<as_signed>(y - other.y)),
 				.z = (other.z > z ? -static_cast<as_signed>(other.z - z) : static_cast<as_signed>(z - other.z)),
 			};
 		} else {
-			return {x - other.x, y - other.y, z - other.z};
+			return vector3{x - other.x, y - other.y, z - other.z};
 		}
 	}
 
