@@ -206,7 +206,7 @@ public:
 			return *_storage._data;
 		}
 		return T(std::forward<U>(default_value));
-	};
+	}
 
 	template <typename U>
 	constexpr T value_or(U&& default_value) && noexcept(std::is_constructible_v<T, U>) {
@@ -214,7 +214,7 @@ public:
 			return *std::move(_storage._data);
 		}
 		return T(std::forward<U>(default_value));
-	};
+	}
 
 	template <typename U>
 	requires (std::is_invocable_v<U> && std::is_constructible_v<T, std::invoke_result_t<U>>)
@@ -223,7 +223,7 @@ public:
 			return *_storage._data;
 		}
 		return T(std::invoke(std::forward<U>(supplier)));
-	};
+	}
 
 	template <typename U>
 	requires (std::is_invocable_v<U> && std::is_constructible_v<T, std::invoke_result_t<U>>)
@@ -232,7 +232,7 @@ public:
 			return *_storage._data;
 		}
 		return T(std::invoke(std::forward<U>(supplier)));
-	};
+	}
 
 	template <typename U>
 	requires (std::is_invocable_v<U> && std::is_constructible_v<T, std::invoke_result_t<U>>)
@@ -242,7 +242,7 @@ public:
 		}
 		*this = std::invoke(std::forward<U>(supplier));
 		return *this;
-	};
+	}
 
 	template <typename U>
 	requires (std::is_invocable_v<U> && std::is_constructible_v<T, std::invoke_result_t<U>>)
