@@ -126,7 +126,7 @@ struct to_closure {
 	std::tuple<Args...> args;
 
 	template <typename Lhs>
-	requires (std::ranges::input_range<Lhs>)
+	requires (std::ranges::input_range<std::remove_cvref_t<Lhs>>)
 	friend constexpr auto operator|(Lhs&& lhs, to_closure<Container, Args...> const& rhs) {
 		return []<size_t... Ns>(Lhs rng, const std::tuple<Args...>& args_, std::index_sequence<Ns...>) {
 			return to_impl<Container>(std::forward<Lhs>(rng), std::get<Ns>(args_)...);
@@ -137,7 +137,7 @@ struct to_closure {
 template <template <typename...> typename Container>
 struct to_closure<Container> {
 	template <typename Lhs>
-	requires (std::ranges::input_range<Lhs>)
+	requires (std::ranges::input_range<std::remove_cvref_t<Lhs>>)
 	friend constexpr auto operator|(Lhs&& lhs, to_closure<Container> const&) {
 		return to_impl<Container>(std::forward<Lhs>(lhs));
 	}
