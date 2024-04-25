@@ -7,6 +7,7 @@
 #include <memory>
 #include <cassert>
 #include <ranges>
+#include <optional>
 
 #include "shion_essentials.hpp"
 
@@ -151,6 +152,114 @@ constexpr auto to(Args&&... args) {
 		return to_closure<Container, Args...>{};
 	}
 }
+
+template <typename T>
+class storage {
+public:
+	constexpr storage() noexcept(std::is_nothrow_constructible_v<T>) requires (std::is_default_constructible_v<T>) {
+		std::construct_at(reinterpret_cast<T*>(_data));
+	}
+
+	template <typename... Args>
+	requires (requires { T(std::declval<Args>()...); })
+	constexpr storage(Args&&... args) noexcept (std::is_nothrow_constructible_v<T, Args...>) {
+		std::construct_at(reinterpret_cast<T*>(_data), std::forward<Args>(args)...);
+	}
+
+	storage& operator=(const storage&) = delete;
+	storage& operator=(storage&&) = delete;
+
+	T* get() noexcept {
+		return std::launder<T>(reinterpret_cast<T*>(_data));
+	}
+
+	T const* get() const noexcept {
+		return std::launder<T>(reinterpret_cast<T*>(_data));
+	}
+
+	T& operator*() & noexcept {
+		return *get();
+	}
+
+	T&& operator*() && noexcept {
+		return static_cast<T&&>(*get());
+	}
+
+	T const& operator*() const& noexcept {
+		return *get();
+	}
+
+	T* operator->() noexcept {
+		return get();
+	}
+
+	T* operator->() const noexcept {
+		return get();
+	}
+
+private:
+	alignas(T) byte _data[sizeof(T)];
+};
+
+template <typename T>
+class storage<T&> {
+public:
+	storage() = delete;
+
+	constexpr storage(T& obj) noexcept : _ptr{&obj} {}
+
+	storage& operator=(const storage&) = delete;
+	storage& operator=(storage&&) = delete;
+
+	T& operator*() noexcept {
+		return *_ptr;
+	}
+
+	T& operator*() const noexcept {
+		return *_ptr;
+	}
+
+	T* operator->() noexcept {
+		return _ptr;
+	}
+
+	T* operator->() const noexcept {
+		return _ptr;
+	}
+
+private:
+	T* _ptr;
+};
+
+template <typename T>
+class storage<T&&> {
+public:
+	storage() = delete;
+
+	constexpr storage(T& obj) noexcept : _ptr{&obj} {}
+
+	storage& operator=(const storage&) = delete;
+	storage& operator=(storage&&) = delete;
+
+	T&& operator*() noexcept {
+		return *static_cast<T&&>(_ptr);
+	}
+
+	T&& operator*() const noexcept {
+		return *static_cast<T&&>(_ptr);
+	}
+
+	T* operator->() noexcept {
+		return _ptr;
+	}
+
+	T* operator->() const noexcept {
+		return _ptr;
+	}
+
+private:
+	T* _ptr;
+};
 
 }
 
