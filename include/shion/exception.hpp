@@ -12,14 +12,16 @@ namespace shion {
  */
 class exception : public std::exception {
 public:
-	SHION_API exception() = default;
-	SHION_API exception(const exception &) = default;
-	SHION_API exception(exception&&) = default;
+	exception() = default;
+	exception(const exception &) = default;
+	exception(exception&&) = default;
 	SHION_API exception(const std::string &msg);
 	SHION_API exception(std::string &&msg) noexcept;
 
-	SHION_API exception& operator=(const exception&) = default;
-	SHION_API exception& operator=(exception&&) = default;
+	exception& operator=(const exception&) = default;
+	exception& operator=(exception&&) = default;
+
+	~exception() override = default;
 
 	template <typename T, typename... Args>
 	exception(std::format_string<T, Args...> fmt, T&& arg1, Args&&... args) :
