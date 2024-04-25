@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "../shion_essentials.hpp"
+#include "../tools.hpp"
 
 namespace shion {
 

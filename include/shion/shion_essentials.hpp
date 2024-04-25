@@ -171,18 +171,22 @@ inline constexpr bool is_abi_compatible = alignof(T) == alignof(U) && sizeof(T) 
 
 }
 
-struct unreachable_result {
+struct wildcard {
 	template <typename T>
-	operator T() {
+	constexpr operator T() noexcept(std::is_nothrow_constructible_v<T>) {
 		return {};
 	}
+};
+
+inline constexpr auto noop = []<typename... Args>(Args&&...) constexpr noexcept {
+	return wildcard{};
 };
 
 /**
  * @brief In release, this returns a "default value". In debug, this calls std::unreachable.
  */
-inline unreachable_result safe_unreachable(unreachable_result) {
-	return unreachable_result{};
+inline wildcard safe_unreachable(wildcard) {
+	return wildcard{};
 }
 
 
