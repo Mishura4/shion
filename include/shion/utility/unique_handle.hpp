@@ -100,7 +100,7 @@ public:
 	}
 
 	template <typename... Ts>
-	constexpr unique_handle(Ts&&... args) noexcept(std::is_nothrow_constructible_v<T, Ts...>) :
+	constexpr unique_handle(Ts&&... args) noexcept(std::is_nothrow_constructible_v<std::decay_t<T>, Ts...>) :
 		_handle{std::forward<Ts>(args)...} {
 	}
 
@@ -112,7 +112,7 @@ public:
 
 	constexpr unique_handle& operator=(unique_handle&& handle) noexcept {
 		_destroy();
-		_handle = std::exchange(handle._handle, T{});
+		_handle = std::exchange(handle._handle, std::decay_t<T>{});
 		return *this;
 	}
 
@@ -124,7 +124,7 @@ public:
 		return _handle;
 	}
 
-	constexpr T* get() const noexcept {
+	constexpr std::decay_t<T> get() const noexcept {
 		return _handle;
 	}
 
@@ -146,11 +146,11 @@ public:
 
 	constexpr void swap(unique_handle& other) noexcept {
 		_destroy();
-		_handle = std::exchange(other._handle, T{});
+		_handle = std::exchange(other._handle, std::decay_t<T>{});
 	}
 
 	template <typename... Ts>
-	constexpr void reset(T value) noexcept {
+	constexpr void reset(std::decay_t<T> value) noexcept {
 		_destroy();
 		_handle = value;
 	}
@@ -163,14 +163,89 @@ private:
 		}
 	}
 
-	T _handle;
+	std::decay_t<T> _handle;
 };
+
+template <typename T, auto Deleter = std::default_delete<T>{}>
+using unique_ptr = unique_handle<std::add_pointer_t<T>, Deleter>;
 
 template <typename T>
 using unique_value = unique_handle<T, std::nullopt>;
 
 using unique_flag = unique_value<bool>;
 
+
+template <typename T, std::equality_comparable_with<T> U, auto R1, auto R2>
+requires (!std::is_pointer_v<T> && !std::is_pointer_v<U>)
+constexpr bool operator==(unique_handle<T, R1> const &lhs, unique_handle<U, R2> const &rhs) noexcept (noexcept(std::declval<T>() == std::declval<U>())) {
+	if (lhs.has_value()) {
+		if (rhs.has_value()) {
+			return *lhs == *rhs;
+		}
+		return false;
+	}
+	return rhs.has_value();
+}
+
+template <typename T, std::three_way_comparable_with<T> U, auto R1, auto R2>
+requires (!std::is_pointer_v<T> && !std::is_pointer_v<U>)
+constexpr auto operator<=>(unique_handle<T, R1> const &lhs, unique_handle<U, R2> const &rhs) noexcept (noexcept(std::declval<T>() <=> std::declval<U>())) {
+	if (auto result = lhs.has_value() <=> rhs.has_value(); result != std::strong_ordering::equal) {
+		return result;
+	}
+	return *lhs <=> *rhs;
+}
+
+template <typename T, typename U, auto R1, auto R2>
+requires (std::is_pointer_v<T> && std::is_pointer_v<U>)
+constexpr bool operator==(unique_handle<T*, R1> const &lhs, unique_handle<U*, R2> const &rhs) {
+	return lhs.get() == rhs.get();
+}
+
+template <typename T, typename U, auto R1, auto R2>
+constexpr auto operator<=>(unique_handle<T*, R1> const &lhs, unique_handle<U*, R2> const &rhs) {
+	return lhs.get() <=> rhs.get();
+}
+
+template <typename T, auto R>
+constexpr bool operator==(unique_handle<T, R> const &lhs, std::nullopt_t) noexcept {
+	return !lhs.has_value();
+}
+
+template <typename T, auto R>
+constexpr auto operator<=>(unique_handle<T, R> const &lhs, std::nullopt_t) noexcept {
+	return lhs.has_value() <=> false;
+}
+
+template <typename T, auto R>
+constexpr bool operator==(std::nullopt_t, unique_handle<T, R> const &rhs) noexcept {
+	return !rhs.has_value();
+}
+
+template <typename T, auto R>
+constexpr auto operator<=>(std::nullopt_t, unique_handle<T, R> const &rhs) noexcept {
+	return false <=> rhs.has_value();
+}
+
+template <typename T, auto R>
+constexpr bool operator==(unique_handle<T, R> const &lhs, std::nullptr_t) noexcept {
+	return !lhs.has_value();
+}
+
+template <typename T, auto R>
+constexpr auto operator<=>(unique_handle<T, R> const &lhs, std::nullptr_t) noexcept {
+	return lhs.has_value() <=> false;
+}
+
+template <typename T, auto R>
+constexpr bool operator==(std::nullptr_t, unique_handle<T, R> const &rhs) noexcept {
+	return !rhs.has_value();
+}
+
+template <typename T, auto R>
+constexpr auto operator<=>(std::nullptr_t, unique_handle<T, R> const &rhs) noexcept {
+	return false <=> rhs.has_value();
+}
 
 }
 

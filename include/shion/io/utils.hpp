@@ -4,6 +4,7 @@
 #include <cstdio>
 
 #include "../shion_essentials.hpp"
+#include "../utility/unique_handle.hpp"
 #include "../tools.hpp"
 
 namespace shion {
@@ -14,7 +15,7 @@ inline constexpr auto close_file = [](FILE* f) {
 	return fclose(f);
 };
 
-using managed_file = shion::managed_ptr<FILE, close_file>;
+using managed_file = shion::unique_ptr<FILE, close_file>;
 
 std::vector<byte> read_file(const char *path) {
 	auto f = managed_file{fopen(path, "rb")};

@@ -25,16 +25,6 @@ inline constexpr bool is_specialization_v<Of<Ts...>, Of> = true;
 template <typename T, template<typename ...> class Of>
 using is_specialization_of = std::bool_constant<is_specialization_v<T, Of>>;
 
-template <typename T, auto Deleter>
-struct unique_ptr_deleter {
-	constexpr void operator()(T* ptr) const noexcept(std::is_nothrow_invocable_v<decltype(Deleter), T*>) {
-		Deleter(ptr);
-	}
-};
-
-template <typename T, auto Deleter, template <typename, typename> typename PtrType = std::unique_ptr>
-using managed_ptr = PtrType<T, unique_ptr_deleter<T, Deleter>>;
-
 template <typename T>
 inline constexpr bool is_optional = false;
 

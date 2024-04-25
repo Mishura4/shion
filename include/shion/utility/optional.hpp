@@ -287,12 +287,22 @@ constexpr auto operator<=>(optional<T> const &lhs, optional<U> const &rhs) noexc
 
 template <typename T>
 constexpr bool operator==(optional<T> const &lhs, std::nullopt_t) noexcept {
-	return lhs.has_value();
+	return !lhs.has_value();
 }
 
 template <typename T>
 constexpr auto operator<=>(optional<T> const &lhs, std::nullopt_t) noexcept {
 	return lhs.has_value() <=> false;
+}
+
+template <typename T>
+constexpr bool operator==(std::nullopt_t, optional<T> const &lhs) noexcept {
+	return !lhs.has_value();
+}
+
+template <typename T>
+constexpr auto operator<=>(std::nullopt_t, optional<T> const &rhs) noexcept {
+	return false <=> rhs.has_value();
 }
 
 template <typename T, std::equality_comparable_with<T> U>
