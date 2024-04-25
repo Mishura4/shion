@@ -252,7 +252,7 @@ public:
 		}
 		*this = std::invoke(std::forward<U>(supplier));
 		return static_cast<T&&>(*this);
-	};
+	}
 
 private:
 	constexpr void _destroy() {

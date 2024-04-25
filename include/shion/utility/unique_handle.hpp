@@ -13,6 +13,11 @@ namespace shion {
 
 inline namespace utility {
 
+/**
+ * @brief Holds a "maybe" unique object, similarly to std::unique_ptr but can handle non-pointers.
+ *
+ * Upon moving this object, its state will be set to non-owning.
+ */
 template <typename T, auto Release>
 class unique_handle {
 public:
@@ -89,6 +94,9 @@ private:
 	optional<T> _handle{};
 };
 
+/**
+ * @brief Specialization of unique_handle for pointers. Essentially the same as std::unique_ptr, but the deleter is a constant expression template parameter.
+ */
 template <typename T, auto Release>
 requires (std::is_pointer_v<T> || std::is_same_v<T, bool>)
 class unique_handle<T, Release> {
