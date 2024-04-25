@@ -4,6 +4,7 @@
 #include <string_view>
 #include <chrono>
 #include <cstddef>
+#include <cassert>
 
 namespace shion {
 
@@ -172,6 +173,12 @@ decltype(auto) safe_unreachable(T&& t [[maybe_unused]]) {
 	}
 #endif
 }
+
+#ifndef NDEBUG
+#  define SHION_ASSERT(a) assert(a)
+#else
+#  define SHION_ASSERT(a) if (!(a)) std::unreachable();
+#endif
 
 #ifdef SHION_SHARED_LIBRARY
 #  ifdef WIN32

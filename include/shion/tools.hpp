@@ -12,12 +12,6 @@
 
 namespace shion {
 
-#ifndef NDEBUG
-#  define SHION_ASSERT(a) assert(a)
-#else
-#  define SHION_ASSERT(a) if (!(a)) std::unreachable();
-#endif
-
 template <typename T, template<typename ...> class Of>
 inline constexpr bool is_specialization_v = false;
 
@@ -128,22 +122,24 @@ constexpr auto to(Rng&& range, Args&&... args) {
 }
 
 template <template <typename...> typename Container, typename... Args>
-struct to_closure : std::ranges::range_adaptor_closure<to_closure<Container, Args...>> {
+struct to_closure {
 	std::tuple<Args...> args;
 
-	template <typename Range>
-	constexpr auto operator()(Range&& rng) const {
-		return []<size_t... Ns>(Range rng, const std::tuple<Args...>& args_, std::index_sequence<Ns...>) {
-			return to_impl<Container>(std::forward<Range>(rng), std::get<Ns>(args_)...);
-		}(static_cast<Range>(rng), args, std::make_index_sequence<sizeof...(Args)>{});
+	template <typename Lhs>
+	requires (std::ranges::input_range<Lhs>)
+	friend constexpr auto operator|(Lhs&& lhs, to_closure<Container, Args...> const& rhs) {
+		return []<size_t... Ns>(Lhs rng, const std::tuple<Args...>& args_, std::index_sequence<Ns...>) {
+			return to_impl<Container>(std::forward<Lhs>(rng), std::get<Ns>(args_)...);
+		}(static_cast<Lhs>(lhs), rhs.args, std::make_index_sequence<sizeof...(Args)>{});
 	}
 };
 
 template <template <typename...> typename Container>
-struct to_closure<Container> : std::ranges::range_adaptor_closure<to_closure<Container>> {
-	template <typename Range>
-	constexpr auto operator()(Range&& rng) const {
-		return to_impl<Container>(std::forward<Range>(rng));
+struct to_closure<Container> {
+	template <typename Lhs>
+	requires (std::ranges::input_range<Lhs>)
+	friend constexpr auto operator|(Lhs&& lhs, to_closure<Container> const&) {
+		return to_impl<Container>(std::forward<Lhs>(lhs));
 	}
 };
 
