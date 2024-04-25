@@ -35,7 +35,7 @@ T safe_unreachable() {
 #ifndef NDEBUG
 #  define SHION_ASSERT(a) assert(a)
 #else
-#  define SHION_ASSERT(a) if (!(a)) unreachable();
+#  define SHION_ASSERT(a) if (!(a)) shion::unreachable();
 #endif
 
 
