@@ -11,6 +11,8 @@
 
 namespace shion {
 
+inline namespace geometry {
+
 /**
  * @brief Macro that defines operator[] and at() in a generic way for mathematic tuples
  */
@@ -437,6 +439,48 @@ struct box {
 };
 
 #undef SHION_DEFINE_TUPLE_ACCESS
+
+using vector2s = vector2<short>;
+using vector2i = vector2<int>;
+using vector2l = vector2<long>;
+using vector2ll = vector2<long long>;
+
+using vector2us = vector2<ushort>;
+using vector2u = vector2<uint>;
+using vector2ul = vector2<ulong>;
+using vector2ull = vector2<ull>;
+
+using vector2i16 = vector2<int16>;
+using vector2i32 = vector2<int32>;
+using vector2i64 = vector2<int64>;
+using vector2u16 = vector2<uint16>;
+using vector2u32 = vector2<uint32>;
+using vector2u64 = vector2<uint64>;
+
+using vector2f = vector2<float>;
+using vector2d = vector2<double>;
+
+using vector3s = vector3<short>;
+using vector3i = vector3<int>;
+using vector3l = vector3<long>;
+using vector3ll = vector3<long long>;
+
+using vector3us = vector3<ushort>;
+using vector3u = vector3<uint>;
+using vector3ul = vector3<ulong>;
+using vector3ull = vector3<ull>;
+
+using vector3i16 = vector3<int16>;
+using vector3i32 = vector3<int32>;
+using vector3i64 = vector3<int64>;
+using vector3u16 = vector3<uint16>;
+using vector3u32 = vector3<uint32>;
+using vector3u64 = vector3<uint64>;
+
+using vector3f = vector3<float>;
+using vector3d = vector3<double>;
+
+}
 
 }
 

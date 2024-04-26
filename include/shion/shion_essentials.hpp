@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cassert>
+#include <type_traits>
 
 namespace shion {
 
@@ -67,6 +68,8 @@ using app_duration = app_clock::duration;
 using wall_clock = std::chrono::system_clock;
 using wall_time = wall_clock::time_point;
 using wall_duration = wall_clock::duration;
+
+using ssize_t = std::make_signed_t<size_t>;
 
 }
 
@@ -189,6 +192,84 @@ inline wildcard safe_unreachable(wildcard) {
 	return wildcard{};
 }
 
+enum class value_type {
+	value,
+	const_value,
+	lvalue_reference,
+	const_lvalue_reference,
+	rvalue_reference,
+	const_rvalue_reference
+};
+
+template <value_type>
+inline constexpr bool is_reference_type = false;
+
+template <>
+inline constexpr bool is_reference_type<value_type::lvalue_reference> = true;
+
+template <>
+inline constexpr bool is_reference_type<value_type::const_lvalue_reference> = true;
+
+template <>
+inline constexpr bool is_reference_type<value_type::rvalue_reference> = true;
+
+template <>
+inline constexpr bool is_reference_type<value_type::const_rvalue_reference> = true;
+
+template <value_type>
+inline constexpr bool is_value_type = false;
+
+template <>
+inline constexpr bool is_value_type<value_type::value> = true;
+
+template <>
+inline constexpr bool is_value_type<value_type::const_value> = true;
+
+template <value_type>
+inline constexpr bool is_lvalue_reference_type = false;
+
+template <>
+inline constexpr bool is_lvalue_reference_type<value_type::lvalue_reference> = true;
+
+template <>
+inline constexpr bool is_lvalue_reference_type<value_type::const_lvalue_reference> = true;
+
+template <value_type>
+inline constexpr bool is_rvalue_reference_type = false;
+
+template <>
+inline constexpr bool is_rvalue_reference_type<value_type::rvalue_reference> = true;
+
+template <>
+inline constexpr bool is_lvalue_reference_type<value_type::const_rvalue_reference> = true;
+
+template <value_type>
+inline constexpr bool is_const_type = false;
+
+template <>
+inline constexpr bool is_const_type<value_type::const_value> = true;
+
+template <value_type Type>
+decltype(auto) forward_like_type(auto& value) noexcept {
+	using provided_t = decltype(value);
+	using value_t = std::remove_reference_t<provided_t>;
+	using stripped_t = std::remove_const_t<value_t>;
+
+	if constexpr (is_value_type<Type> || is_rvalue_reference_type<Type>) {
+		if constexpr (is_const_type<Type>) {
+			return static_cast<std::add_rvalue_reference_t<std::add_const_t<stripped_t>>>(value);
+		} else {
+			return static_cast<std::add_rvalue_reference_t<stripped_t>>(value);
+		}
+	} else {
+		static_assert(is_lvalue_reference_type<Type>);
+		if constexpr (is_const_type<Type>) {
+			return static_cast<std::add_lvalue_reference_t<std::add_const_t<stripped_t>>>(value);
+		} else {
+			return static_cast<std::add_lvalue_reference_t<stripped_t>>(value);
+		}
+	}
+}
 
 /**
  * @brief In release, this returns a "default value". In debug, this calls std::unreachable.

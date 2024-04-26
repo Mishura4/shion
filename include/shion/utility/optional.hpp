@@ -28,16 +28,16 @@ public:
 	constexpr optional(const optional& other) noexcept (std::is_nothrow_copy_constructible_v<T>)
 	requires (std::is_copy_constructible_v<T>) {
 		if (other.has_value()) {
-			_storage._data = storage<T>{*other._ptr};
-			_ptr = _storage.data.get();
+			_data.emplace(*other._ptr);
+			_ptr = &_data.get();
 		}
 	}
 
 	constexpr optional(optional&& other) noexcept (std::is_nothrow_move_constructible_v<T>)
 	requires (std::is_move_constructible_v<T>) {
 		if (other.has_value()) {
-			_storage._data = storage<T>{std::move(*other._ptr)};
-			_ptr = _storage.data.get();
+			_data.emplace(std::move(*other._ptr));
+			_ptr = &_data.get();
 		}
 	}
 
@@ -46,8 +46,8 @@ public:
 	explicit(!std::is_convertible_v<T, std::add_lvalue_reference_t<std::add_const_t<U>>>)
 	constexpr optional(const optional<U>& other) noexcept (std::is_nothrow_constructible_v<T, std::add_lvalue_reference_t<std::add_const_t<U>>>) {
 		if (other.has_value()) {
-			_storage = { ._data = storage<T>{*other._ptr} };
-			_ptr = _storage.data.get();
+			_data.emplace(*other._ptr);
+			_ptr = &_data.get();
 		}
 	}
 
@@ -56,16 +56,23 @@ public:
 	explicit(!std::is_convertible_v<std::add_rvalue_reference_t<U>, T>)
 	constexpr optional(optional<U>&& other) noexcept (std::is_nothrow_constructible_v<T, std::add_rvalue_reference_t<U>>) {
 		if (other.has_value()) {
-			_storage = { ._data = storage<T>{std::move(*other._ptr)} };
-			_ptr = _storage.data.get();
+			_data.emplace(std::move(*other._ptr));
+			_ptr = &_data.get();
 		}
 	}
 
 	template <typename... Args>
 	requires (std::is_constructible_v<T, Args...>)
 	explicit constexpr optional(std::in_place_t, Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) :
-		_storage{._data{std::forward<Args>(args)...}},
-		_ptr{_storage._data.get()} {
+		_data(std::forward<Args>(args)...),
+		_ptr{&_data.get()} {
+	}
+
+	template <typename U>
+	requires (std::is_constructible_v<T, U>)
+	explicit constexpr optional(U&& value) noexcept(std::is_nothrow_constructible_v<T, U>) :
+		_data(std::forward<U>(value)),
+		_ptr{&_data.get()} {
 	}
 
 	constexpr ~optional() {
@@ -82,8 +89,8 @@ public:
 	requires (std::is_copy_constructible_v<T>) {
 		_destroy();
 		if (other.has_value()) {
-			_storage = { ._data = storage<T>{*other} };
-			_ptr = _storage._data.get();
+			_data.emplace(*other);
+			_ptr = &_data.get();
 		} else {
 			_ptr = nullptr;
 		}
@@ -94,8 +101,8 @@ public:
 	requires (std::is_move_constructible_v<T>) {
 		_destroy();
 		if (other.has_value()) {
-			_storage = { ._data = storage<T>{*std::move(other)} };
-			_ptr = _storage._data.get();
+			_data.emplace(*std::move(other));
+			_ptr = &_data.get();
 		} else {
 			_ptr = nullptr;
 		}
@@ -107,8 +114,8 @@ public:
 	requires (std::is_constructible_v<T, U>) {
 		_destroy();
 		if (other.has_value()) {
-			_storage = { ._data = storage<T>{*other} };
-			_ptr = _storage._data.get();
+			_data.emplace(*other);
+			_ptr = &_data.get();
 		} else {
 			_ptr = nullptr;
 		}
@@ -120,8 +127,8 @@ public:
 	requires (std::is_constructible_v<T, U>) {
 		_destroy();
 		if (other.has_value()) {
-			_storage = { ._data = storage<T>{*std::move(other)} };
-			_ptr = _storage._data.get();
+			_data.emplace(*std::move(other));
+			_ptr = &_data.get();
 		} else {
 			_ptr = nullptr;
 		}
@@ -131,37 +138,37 @@ public:
 	constexpr decltype(auto) operator*() & noexcept {
 		SHION_ASSERT(has_value());
 
-		return *_storage._data;
+		return *_data;
 	}
 
 	constexpr decltype(auto) operator*() const& noexcept {
 		SHION_ASSERT(has_value());
 
-		return *_storage._data;
+		return *_data;
 	}
 
 	constexpr decltype(auto) operator*() && noexcept {
 		SHION_ASSERT(has_value());
 
-		return *std::move(_storage._data);
+		return *std::move(_data);
 	}
 
 	constexpr decltype(auto) operator*() const&& noexcept {
 		SHION_ASSERT(has_value());
 
-		return *std::move(_storage._data);
+		return *std::move(_data);
 	}
 
 	constexpr auto operator->() noexcept {
 		SHION_ASSERT(has_value());
 
-		return _storage._data.operator->();
+		return _data.operator->();
 	}
 
 	constexpr auto operator->() const noexcept {
 		SHION_ASSERT(has_value());
 
-		return _storage._data.operator->();
+		return _data.operator->();
 	}
 
 	explicit constexpr operator bool() const noexcept {
@@ -203,7 +210,7 @@ public:
 	template <typename U>
 	constexpr T value_or(U&& default_value) const& noexcept(std::is_constructible_v<T, U>) {
 		if (has_value()) {
-			return *_storage._data;
+			return *_data;
 		}
 		return T(std::forward<U>(default_value));
 	}
@@ -211,25 +218,25 @@ public:
 	template <typename U>
 	constexpr T value_or(U&& default_value) && noexcept(std::is_constructible_v<T, U>) {
 		if (has_value()) {
-			return *std::move(_storage._data);
+			return *std::move(_data);
 		}
 		return T(std::forward<U>(default_value));
 	}
 
 	template <typename U>
-	requires (std::is_invocable_v<U> && std::is_constructible_v<T, std::invoke_result_t<U>>)
+	requires (std::is_copy_constructible_v<U> && std::is_invocable_v<U> && std::is_constructible_v<T, std::invoke_result_t<U>>)
 	constexpr T or_else(U&& supplier) const& noexcept(std::is_constructible_v<T, std::invoke_result_t<U>>) {
 		if (has_value()) {
-			return *_storage._data;
+			return *_data;
 		}
 		return T(std::invoke(std::forward<U>(supplier)));
 	}
 
 	template <typename U>
-	requires (std::is_invocable_v<U> && std::is_constructible_v<T, std::invoke_result_t<U>>)
+	requires (std::is_copy_constructible_v<U> && std::is_invocable_v<U> && std::is_constructible_v<T, std::invoke_result_t<U>>)
 	constexpr T or_else(U&& supplier) && noexcept(std::is_constructible_v<T, std::invoke_result_t<U>>) {
 		if (has_value()) {
-			return *_storage._data;
+			return *_data;
 		}
 		return T(std::invoke(std::forward<U>(supplier)));
 	}
@@ -257,13 +264,11 @@ public:
 private:
 	constexpr void _destroy() {
 		if (_ptr)
-			std::destroy_at(_storage._data);
+			_data.destroy();
 	}
 
-	union {
-		storage<T>      _data;
-	} _storage;
-	T *_ptr{nullptr};
+	detail::storage<T>          _data;
+	std::remove_reference_t<T> *_ptr{nullptr};
 };
 
 template <typename T, std::equality_comparable_with<T> U>

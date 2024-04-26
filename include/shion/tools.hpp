@@ -13,6 +13,8 @@
 
 namespace shion {
 
+struct empty {};
+
 template <typename T, template<typename ...> class Of>
 inline constexpr bool is_specialization_v = false;
 
@@ -121,112 +123,222 @@ constexpr auto to(Args&&... args) {
 	}
 }
 
+template <typename T, typename U>
+inline constexpr bool is_compatible_reference = false;
+
+template <typename T, typename U>
+inline constexpr bool is_compatible_reference<T&, U&> = true;
+
+template <typename T, typename U>
+inline constexpr bool is_compatible_reference<const T&, U&> = true;
+
+template <typename T, typename U>
+inline constexpr bool is_compatible_reference<T&&, U&&> = true;
+
+template <typename T, typename U>
+inline constexpr bool is_compatible_reference<const T&&, U&&> = true;
+
+namespace detail {
+
 template <typename T>
-class storage {
-public:
-	constexpr storage() noexcept(std::is_nothrow_constructible_v<T>) requires (std::is_default_constructible_v<T>) {
-		std::construct_at(reinterpret_cast<T*>(_data));
+union storage {
+	constexpr storage() : dummy{} {}
+
+	template <typename... Args>
+	constexpr storage(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) : data(std::forward<Args>(args)...) {
+	}
+
+	template <typename U, typename... Args>
+	requires (std::invocable<U, Args...> && std::constructible_from<T, std::invoke_result_t<U, Args...>>)
+	constexpr storage(U&& fun, Args&&... args)
+	noexcept(std::is_nothrow_invocable_v<U, Args...> && std::is_nothrow_constructible_v<U, std::invoke_result_t<U, Args...>>) :
+		data(std::invoke(std::forward<U>(fun), std::forward<Args>(args)...)) {
 	}
 
 	template <typename... Args>
-	requires (requires { T(std::declval<Args>()...); })
-	constexpr storage(Args&&... args) noexcept (std::is_nothrow_constructible_v<T, Args...>) {
-		std::construct_at(reinterpret_cast<T*>(_data), std::forward<Args>(args)...);
+	constexpr void emplace(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) {
+		 std::construct_at(&data, std::forward<Args>(args)...);
 	}
 
-	storage& operator=(const storage&) = delete;
-	storage& operator=(storage&&) = delete;
-
-	T* get() noexcept {
-		return std::launder<T>(reinterpret_cast<T*>(_data));
+	template <typename U, typename... Args>
+	requires (std::invocable<U, Args...> && std::constructible_from<T, std::invoke_result_t<U, Args...>>)
+	constexpr void emplace(U&& fun, Args&&... args)
+	noexcept(std::is_nothrow_invocable_v<U, Args...> && std::is_nothrow_constructible_v<U, std::invoke_result_t<U, Args...>>) {
+		 std::construct_at(&data, std::invoke(std::forward<U>(fun), std::forward<Args>(args)...));
 	}
 
-	T const* get() const noexcept {
-		return std::launder<T>(reinterpret_cast<T*>(_data));
+	void destroy() noexcept(std::is_nothrow_destructible_v<T>) {
+		std::destroy_at(&data);
 	}
 
-	T& operator*() & noexcept {
-		return *get();
+	T& get() & noexcept {
+		return data;
 	}
 
-	T&& operator*() && noexcept {
-		return static_cast<T&&>(*get());
+	T&& get() && noexcept {
+		return std::move(data);
 	}
 
-	T const& operator*() const& noexcept {
-		return *get();
+	const T& get() const& noexcept {
+		return data;
 	}
 
-	T* operator->() noexcept {
-		return get();
+	const T&& get() const&& noexcept {
+		return data;
 	}
 
-	T* operator->() const noexcept {
-		return get();
-	}
+	~storage() {} // Required if T has a non-trivial destructor
 
-private:
-	alignas(T) byte _data[sizeof(T)];
+	empty dummy;
+	T     data;
 };
 
 template <typename T>
-class storage<T&> {
-public:
-	storage() = delete;
+requires (std::is_trivially_destructible_v<T> && !std::is_reference_v<T>)
+union storage<T> {
+	constexpr storage() : dummy{} {}
 
-	constexpr storage(T& obj) noexcept : _ptr{&obj} {}
-
-	storage& operator=(const storage&) = delete;
-	storage& operator=(storage&&) = delete;
-
-	T& operator*() noexcept {
-		return *_ptr;
+	template <typename... Args>
+	constexpr storage(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) : data(std::forward<Args>(args)...) {
 	}
 
-	T& operator*() const noexcept {
-		return *_ptr;
+	template <typename U, typename... Args>
+	requires (std::invocable<U, Args...> && std::constructible_from<T, std::invoke_result_t<U, Args...>>)
+	constexpr storage(U&& fun, Args&&... args)
+	noexcept(std::is_nothrow_invocable_v<U, Args...> && std::is_nothrow_constructible_v<U, std::invoke_result_t<U, Args...>>) :
+		data(std::invoke(std::forward<U>(fun), std::forward<Args>(args)...)) {
 	}
 
-	T* operator->() noexcept {
-		return _ptr;
+	template <typename... Args>
+	constexpr void emplace(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) {
+		 std::construct_at(&data, std::forward<Args>(args)...);
 	}
 
-	T* operator->() const noexcept {
-		return _ptr;
+	template <typename U, typename... Args>
+	requires (std::invocable<U, Args...> && std::constructible_from<T, std::invoke_result_t<U, Args...>>)
+	constexpr void emplace(U&& fun, Args&&... args)
+	noexcept(std::is_nothrow_invocable_v<U, Args...> && std::is_nothrow_constructible_v<U, std::invoke_result_t<U, Args...>>) {
+		 std::construct_at(&data, std::invoke(std::forward<U>(fun), std::forward<Args>(args)...));
 	}
 
-private:
-	T* _ptr;
+	void destroy() noexcept(std::is_nothrow_destructible_v<T>) {
+		std::destroy_at(&data);
+	}
+
+	T& get() & noexcept {
+		return data;
+	}
+
+	T&& get() && noexcept {
+		return std::move(data);
+	}
+
+	const T& get() const& noexcept {
+		return data;
+	}
+
+	const T&& get() const&& noexcept {
+		return data;
+	}
+
+	empty dummy;
+	T     data;
 };
 
 template <typename T>
-class storage<T&&> {
+union storage<T&> {
+	constexpr storage() : dummy{} {}
+
+	constexpr storage(T& value) noexcept : data(&value) {
+	}
+
+	template <typename U, typename... Args>
+	requires (std::invocable<U, Args...> && is_compatible_reference<T&, std::invoke_result<U, Args...>>)
+	constexpr storage(U&& fun, Args&&... args) noexcept(std::is_nothrow_invocable_v<U, Args...>) : data(std::invoke(std::forward<U>(fun), std::forward<Args>(args)...)) {
+	}
+
+	constexpr void emplace(T&& value) noexcept {
+		std::construct_at(&data, &value);
+	}
+
+	template <typename U, typename... Args>
+	requires (std::invocable<U, Args...> && is_compatible_reference<T&&, std::invoke_result<U, Args...>>)
+	constexpr void emplace(U&& fun, Args&&... args) noexcept(std::is_nothrow_invocable_v<U, Args...>) {
+		std::construct_at(&data, &std::invoke(std::forward<U>(fun), std::forward<Args>(args)...));
+	}
+
+	void destroy() noexcept(std::is_nothrow_destructible_v<T>) {
+		std::destroy_at(&data);
+	}
+
+	T& get() noexcept {
+		return *data;
+	}
+
+	T& get() const noexcept {
+		return *data;
+	}
+
+	empty                                          dummy;
+	std::add_pointer_t<std::remove_reference_t<T>> data;
+};
+
+template <typename T>
+union storage<T&&> {
+	constexpr storage() : dummy{} {}
+
+	constexpr storage(T&& value) noexcept : data(&value) {
+	}
+
+	template <typename U, typename... Args>
+	requires (std::invocable<U, Args...> && is_compatible_reference<T&&, std::invoke_result<U, Args...>>)
+	constexpr storage(U&& fun, Args&&... args) noexcept(std::is_nothrow_invocable_v<U, Args...>) : data(&std::invoke(std::forward<U>(fun), std::forward<Args>(args)...)) {
+	}
+
+	constexpr void emplace(T&& value) noexcept {
+		std::construct_at(&data, &value);
+	}
+
+	template <typename U, typename... Args>
+	requires (std::invocable<U, Args...> && is_compatible_reference<T&&, std::invoke_result<U, Args...>>)
+	constexpr void emplace(U&& fun, Args&&... args) noexcept(std::is_nothrow_invocable_v<U, Args...>) {
+		std::construct_at(&data, &std::invoke(std::forward<U>(fun), std::forward<Args>(args)...));
+	}
+
+	void destroy() noexcept(std::is_nothrow_destructible_v<T>) {
+		std::destroy_at(&data);
+	}
+
+	T&& get() noexcept {
+		return std::move(*data);
+	}
+
+	T&& get() const noexcept {
+		return std::move(*data);
+	}
+
+	empty                                          dummy;
+	std::add_pointer_t<std::remove_reference_t<T>> data;
+};
+
+}
+
+template <typename T>
+class and_then {
 public:
-	storage() = delete;
+	template <typename U>
+	constexpr and_then(U&& fun) noexcept(std::is_nothrow_constructible_v<T, U>) : _fun{std::forward<U>(fun)} {}
+	constexpr and_then(and_then const&) = default;
+	constexpr and_then(and_then&&) = default;
 
-	constexpr storage(T& obj) noexcept : _ptr{&obj} {}
+	constexpr and_then &operator=(and_then const&) = default;
+	constexpr and_then &operator=(and_then&&) = default;
 
-	storage& operator=(const storage&) = delete;
-	storage& operator=(storage&&) = delete;
-
-	T&& operator*() noexcept {
-		return *static_cast<T&&>(_ptr);
+	constexpr ~and_then() {
+		std::invoke(_fun);
 	}
-
-	T&& operator*() const noexcept {
-		return *static_cast<T&&>(_ptr);
-	}
-
-	T* operator->() noexcept {
-		return _ptr;
-	}
-
-	T* operator->() const noexcept {
-		return _ptr;
-	}
-
 private:
-	T* _ptr;
+	T _fun;
 };
 
 }
