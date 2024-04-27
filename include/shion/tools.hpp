@@ -341,6 +341,9 @@ private:
 	T _fun;
 };
 
+template <typename T>
+and_then(T t) -> and_then<T>;
+
 }
 
 #endif /* SHION_TOOLS_TOOLS_H_ */
