@@ -363,7 +363,7 @@ public:
 			return _hive && _index >= 0;
 		}
 
-		constexpr basic_iterator(nullptr_t) = delete;
+		constexpr basic_iterator(std::nullptr_t) = delete;
 
 		constexpr basic_iterator(hive* h) noexcept :
 			basic_iterator(_find_at_least(h, h->_pages.begin(), 0)) {
