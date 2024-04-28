@@ -4,6 +4,7 @@
 #include <utility>
 #include <optional>
 #include <type_traits>
+#include <functional>
 
 #include "../shion_essentials.hpp"
 
