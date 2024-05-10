@@ -158,6 +158,20 @@ consteval uint64 operator""_u64(unsigned long long int lit) {
 	return static_cast<uint64>(lit);
 }
 
+consteval ssize_t operator""_sst(unsigned long long int lit) {
+	if (lit > lossless_cast<unsigned long long int>(std::numeric_limits<ssize_t>::max())) {
+		unreachable();
+	}
+	return static_cast<ssize_t>(lit);
+}
+
+consteval ssize_t operator""_st(unsigned long long int lit) {
+	if (lit > std::numeric_limits<size_t>::max()) {
+		unreachable();
+	}
+	return static_cast<size_t>(lit);
+}
+
 }
 using namespace literals;
 

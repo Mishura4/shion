@@ -257,6 +257,14 @@ private:
 	detail::storage<T> _storage[64];
 };
 
+inline constexpr size_t hive_page_target_size = 24 * 1024;
+
+template <typename T>
+inline constexpr size_t hive_page_num_fields = std::max(hive_page_target_size / sizeof(T), std::size_t{64}) / std::size_t{64};
+
+template <typename T>
+inline constexpr size_t hive_page_extent = hive_page_num_fields<T> * std::size_t{64};
+
 template <typename T>
 inline constexpr size_t hive_block_size = sizeof(hive_block<T>);
 
@@ -266,6 +274,172 @@ inline constexpr size_t hive_blocks_per_page = sizeof(hive_block<T>) * 32;
 template <typename T>
 requires (sizeof(T) * 32 < 63 * 1024)
 inline constexpr size_t hive_blocks_per_page<T> = ((63 * 1024) / hive_block_size<T>);
+
+template <typename T>
+union hive_storage {
+	constexpr hive_storage() noexcept : dummy{} {}
+	constexpr hive_storage(const hive_storage&) noexcept : dummy{} {}
+	constexpr hive_storage(hive_storage&&) noexcept : dummy{} {}
+	constexpr ~hive_storage() {};
+
+	empty dummy;
+	T value;
+};
+
+template <typename T>
+requires (std::is_trivial_v<T>)
+union hive_storage<T> {
+	T value;
+};
+
+template <typename T>
+class hive_page {
+public:
+	constexpr hive_page() = default;
+
+	constexpr hive_page(const hive_page& rhs) noexcept requires (std::is_trivially_copy_constructible_v<T>) = default;
+	constexpr hive_page(const hive_page& rhs) noexcept(std::is_nothrow_copy_constructible_v<T>) requires (std::is_copy_constructible_v<T> && !std::is_trivially_copy_constructible_v<T>) {
+		for (size_t i = 0; i < hive_page_num_fields<T>; ++i) {
+			for (size_t j = 0; j < 64; ++j) {
+				if ((rhs._skipfields[1_st << j] & 63) != 0) {
+					std::construct_at(&_storage[i * 64 + j], rhs._storage[i * 64 + j]);
+				}
+			}
+			_skipfields[i] = rhs._skipfields[i];
+		}
+	}
+	
+	constexpr hive_page(hive_page&& rhs) noexcept requires (std::is_trivially_move_constructible_v<T>) = default;
+	constexpr hive_page(hive_page&& rhs) noexcept(std::is_nothrow_move_constructible_v<T>) requires (std::is_move_constructible_v<T> && !std::is_trivially_move_constructible_v<T>) {
+		for (size_t i = 0; i < hive_page_num_fields<T>; ++i) {
+			for (size_t j = 0; j < 64; ++j) {
+				if ((rhs._skipfields[1_st << j] & 63) != 0) {
+					std::construct_at(&_storage[i * 64 + j], std::move(rhs._storage[i * 64 + j]));
+				}
+			}
+			_skipfields[i] = rhs._skipfields[i];
+		}
+	}
+	
+	constexpr ~hive_page() noexcept requires (std::is_trivially_destructible_v<T>) = default;
+	constexpr ~hive_page() noexcept requires (!std::is_trivially_destructible_v<T>) {
+		for (size_t i = 0; i < hive_page_num_fields<T>; ++i) {
+			for (size_t j = 0; j < 64; ++j) {
+				if ((_skipfields[1_st << j] & 63) != 0) {
+					std::destroy_at(&_storage[i * 64_st + j]);
+				}
+			}
+		}
+	}
+
+	constexpr hive_page& operator=(const hive_page& rhs) noexcept requires (std::is_trivially_copy_constructible_v<T> && std::is_trivially_copy_assignable_v<T>) = default;
+	constexpr hive_page& operator=(const hive_page& rhs) noexcept(std::is_nothrow_copy_constructible_v<T>) requires (std::is_copy_constructible_v<T> && !std::is_trivially_copy_constructible_v<T>) {
+		for (size_t i = 0; i < hive_page_num_fields<T>; ++i) {
+			for (size_t j = 0; j < 64; ++j) {
+				if ((rhs._skipfields[i] & (1_st << j)) == 0) {
+					if ((_skipfields[i] & (1_st << j)) != 0) {
+						std::destroy_at(&_storage[(i << 6_st) | j].value);
+					}
+				} else {
+					if ((_skipfields[i] & (1_st << j)) != 0) {
+						_storage[(i << 6_st) | j].value = rhs._storage[(i << 6) | j].value;
+					} else {
+						std::construct_at(&_storage[(i << 6) | j].value, _storage[(i << 6) | j].value);
+					}
+				}
+			}
+			_skipfields[i] = rhs._skipfields[i];
+		}
+		return *this;
+	}
+
+	constexpr hive_page& operator=(hive_page&& rhs) noexcept requires (std::is_trivially_move_constructible_v<T> && std::is_trivially_move_assignable_v<T>) = default;
+	constexpr hive_page& operator=(hive_page&& rhs) noexcept(std::is_nothrow_move_constructible_v<T>) requires (std::is_move_constructible_v<T> && !std::is_trivially_move_constructible_v<T>) {
+		for (size_t i = 0; i < hive_page_num_fields<T>; ++i) {
+			for (size_t j = 0; j < 64; ++j) {
+				if ((rhs._skipfields[i] & (1_st << j)) == 0) {
+					if ((_skipfields[i] & (1_st << j)) != 0) {
+						std::destroy_at(&_storage[(i << 6_st) | j].value);
+					}
+				} else {
+					if ((_skipfields[i] & (1_st << j)) != 0) {
+						_storage[(i << 6_st) | j].value = std::move(rhs._storage[(i << 6) | j].value);
+					} else {
+						std::construct_at(&_storage[(i << 6) | j].value, std::move(_storage[(i << 6) | j].value));
+					}
+				}
+			}
+			_skipfields[i] = rhs._skipfields[i];
+		}
+		return *this;
+	}
+
+	constexpr bool has(std::size_t idx) const noexcept {
+		return (_skipfields[idx >> 6] & (1_st << idx)) != 0;
+	}
+
+	template <typename... Args>
+	constexpr T& emplace_at(std::size_t idx, Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) {
+		SHION_ASSERT(!has(idx));
+
+		T* ret = std::construct_at(&_storage[idx].value, std::forward<Args>(args)...);
+		_skipfields[idx << 6_st] |= (1_st << (idx & 63));
+		return *ret;
+	}
+
+	template <typename... Args>
+	constexpr T& retrieve(std::size_t idx) noexcept {
+		SHION_ASSERT(has(idx));
+
+		return _storage[idx].value;
+	}
+
+	template <typename... Args>
+	constexpr T const& retrieve(std::size_t idx) const noexcept {
+		SHION_ASSERT(has(idx));
+
+		return _storage[idx].value;
+	}
+
+	constexpr void erase(ssize_t idx) noexcept(std::is_nothrow_destructible_v<T>) {
+		SHION_ASSERT(has(idx));
+
+		std::destroy_at(&_storage[idx].value);
+		_skipfields[idx << 6_st] &= ~(1_st << (idx & 63));
+	}
+
+	constexpr ssize_t first_free() const noexcept {
+		for (auto i = 0; i < hive_page_num_fields<T>; ++i) {
+			auto num_one = std::countr_one(_skipfields[i]);
+			if (num_one != 64) {
+				return i * 64 + num_one;
+			}
+		}
+		return hive_page_num_fields<T> * 64;
+	}
+
+	constexpr ssize_t first_present() const noexcept {
+		for (auto i = 0; i < hive_page_num_fields<T>; ++i) {
+			auto num_zero = std::countr_zero(_skipfields[i]);
+			if (num_zero != 64) {
+				return i * 64 + num_zero;
+			}
+		}
+		return hive_page_num_fields<T> * 64;
+	}
+
+private:
+
+	constexpr void _destroy_at(ssize_t idx) noexcept(std::is_nothrow_destructible_v<T>) {
+		auto skipfield = idx >> ssize_t{6};
+		if ((_skipfields[skipfield] & (1 << (idx & 63))) != 0) {
+			std::destroy_at(_storage[idx]);
+		}
+	}
+
+	uint64 _skipfields[hive_page_num_fields<T>]{};
+	hive_storage<T> _storage[hive_page_extent<T>];
+};
 
 }
 
