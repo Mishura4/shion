@@ -285,6 +285,18 @@ decltype(auto) forward_like_type(auto& value) noexcept {
 	}
 }
 
+template <typename T>
+inline constexpr bool is_copyable = std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>;
+
+template <typename T>
+inline constexpr bool is_moveable = std::is_move_constructible_v<T> && std::is_move_assignable_v<T>;
+
+template <typename T>
+inline constexpr bool is_nothrow_copyable = std::is_nothrow_copy_constructible_v<T> && std::is_nothrow_copy_assignable_v<T>;
+
+template <typename T>
+inline constexpr bool is_nothrow_moveable = std::is_nothrow_move_constructible_v<T> && std::is_nothrow_move_assignable_v<T>;
+
 /**
  * @brief In release, this returns a "default value". In debug, this calls std::unreachable.
  */

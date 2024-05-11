@@ -11,276 +11,36 @@
 namespace shion {
 
 template <typename T>
-struct hive_emplace_result {
-	constexpr explicit operator bool() const noexcept {
-		return inserted;
-	}
-
-	T*      inserted{nullptr};
-	ssize_t index{};
-};
-
+class hive;
 
 namespace detail {
 
-inline constexpr bool valid_hive_block_idx(ssize_t idx) noexcept {
-	return (idx & ~ssize_t{63}) == 0;
-}
+inline constexpr ssize_t hive_page_target_size = 24 * 1024;
 
 template <typename T>
-class hive_block {
-public:
-	template<value_type ValueType>
-	class iterator {
-	public:
-		constexpr friend bool operator==(iterator const& lhs, iterator const& rhs) noexcept {
-			if (rhs._array == nullptr) {
-				return lhs._array == nullptr;
-			}
-			if (lhs._array == nullptr) {
-				return false;
-			}
-			return lhs._index == rhs._index;
-		}
-
-		constexpr iterator operator++(int) const noexcept {
-			for (ssize_t idx = _index; idx < 63;) {
-				++idx;
-				if (_presence_flags & (1_u64 << idx)) {
-					return {_array, _presence_flags, idx};
-				}
-			}
-			return {nullptr, 0, 64};
-		}
-
-		constexpr iterator& operator++(int) noexcept {
-			while (_index < 63) {
-				++_index;
-				if (_presence_flags & (1_u64 << _index)) {
-					return {_array, _presence_flags, _index};
-				}
-			}
-			return {nullptr, 0, 64};
-		}
-
-		constexpr decltype(auto) operator*() const noexcept {
-			SHION_ASSERT(detail::valid_hive_block_idx(_index) && (_presence_flags & (1_u64 << _index)) == 0);
-
-			return forward_like_type<ValueType>(_array[_index].get());
-		}
-
-	private:
-		storage<T>*_array{nullptr};
-		uint64     _presence_flags{0};
-		ssize_t    _index{0};
-	};
-
-	constexpr hive_block() noexcept = default;
-
-	constexpr hive_block(const hive_block &rhs) noexcept (std::is_nothrow_copy_constructible_v<T>)
-	requires (std::is_copy_constructible_v<T>) {
-		this->_copy(rhs, std::make_index_sequence<64>());
-		if constexpr (std::is_nothrow_copy_constructible_v<T>)
-			_presence_flags = rhs._presence_flags;
-	}
-
-	constexpr hive_block(hive_block &&rhs) noexcept (std::is_nothrow_move_constructible_v<T>)
-	requires (std::is_move_constructible_v<T>) {
-		this->_move(std::move(rhs), std::make_index_sequence<64>());
-		if constexpr (std::is_nothrow_move_constructible_v<T>)
-			_presence_flags = rhs._presence_flags;
-	}
-
-	constexpr ~hive_block() {
-		this->_destroy(std::make_index_sequence<64>());
-	}
-
-	constexpr auto begin() & noexcept -> iterator<value_type::lvalue_reference> {
-		return {_storage, _presence_flags, 0};
-	}
-
-	constexpr auto end() & noexcept -> iterator<value_type::lvalue_reference> {
-		return {nullptr, 0, 0};
-	}
-
-	constexpr auto begin() const& noexcept -> iterator<value_type::const_lvalue_reference> {
-		return {_storage, _presence_flags, 0};
-	}
-
-	constexpr auto end() const& noexcept -> iterator<value_type::const_lvalue_reference> {
-		return {nullptr, 0, 0};
-	}
-
-	constexpr auto begin() && noexcept -> iterator<value_type::rvalue_reference> {
-		return {_storage, _presence_flags, 0};
-	}
-
-	constexpr auto end() && noexcept -> iterator<value_type::rvalue_reference> {
-		return {nullptr, 0, 0};
-	}
-
-	constexpr auto begin() const&& noexcept -> iterator<value_type::const_rvalue_reference> {
-		return {_storage, _presence_flags, 0};
-	}
-
-	constexpr auto end() const&& noexcept -> iterator<value_type::const_rvalue_reference> {
-		return {nullptr, 0, 0};
-	}
-
-	constexpr bool has(ssize_t idx) const noexcept {
-		SHION_ASSERT(detail::valid_hive_block_idx(idx));
-
-		return (_presence_flags & (1_u64 << idx)) != 0;
-	}
-
-	constexpr hive_block& operator=(const hive_block &rhs) noexcept (std::is_nothrow_copy_constructible_v<T>)
-	requires (std::is_copy_constructible_v<T>) {
-		this->_destroy(std::make_index_sequence<64>());
-		this->_copy(rhs, std::make_index_sequence<64>());
-		if constexpr (std::is_nothrow_copy_constructible_v<T>)
-			_presence_flags = rhs._presence_flags;
-	}
-
-	constexpr hive_block& operator=(hive_block &&rhs) noexcept (std::is_nothrow_move_constructible_v<T>)
-	requires (std::is_move_constructible_v<T>) {
-		this->_destroy(std::make_index_sequence<64>());
-		this->_move(std::move(rhs), std::make_index_sequence<64>());
-		if constexpr (std::is_nothrow_move_constructible_v<T>)
-			_presence_flags = rhs._presence_flags;
-	}
-
-	constexpr optional<std::add_lvalue_reference_t<T>> operator[](ssize_t index) noexcept {
-		if (has(index)) {
-			return std::nullopt;
-		}
-		return optional<std::add_lvalue_reference_t<T>>{_storage[index]._data};
-	}
-
-	constexpr auto retrieve(ssize_t index) noexcept -> decltype(auto) {
-		SHION_ASSERT(has(index));
-
-		return _storage[index].get();
-	}
-
-	template <typename... Args>
-	constexpr auto emplace(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) -> hive_emplace_result<std::remove_reference_t<std::add_pointer_t<T>>>
-	requires (std::is_constructible_v<T, Args...>) {
-		size_t count = std::countr_one(_presence_flags);
-
-		if (count >= 64) {
-			return {nullptr, std::numeric_limits<ssize_t>::max()};
-		}
-		return {std::addressof(emplace_at(count, std::forward<Args>(args)...)), count};
-	}
-
-	template <typename... Args>
-	constexpr auto emplace_at(ssize_t idx, Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) -> decltype(auto)
-	requires (std::is_constructible_v<T, Args...>) {
-		SHION_ASSERT(!has(idx));
-
-		_storage[idx].emplace(std::forward<Args&&>(args)...);
-		_presence_flags |= (1_u64 << idx);
-		return _storage[idx].get();
-	}
-
-	constexpr void erase(ssize_t idx) noexcept {
-		SHION_ASSERT(has(idx));
-
-		_storage[idx].destroy();
-		_presence_flags &= ~(1_u64 << idx);
-	}
-
-	constexpr ssize_t first_free() const noexcept {
-		return std::countr_one(_presence_flags);
-	}
-
-	constexpr ssize_t first_present() const noexcept {
-		return std::countr_zero(_presence_flags);
-	}
-
-	constexpr ssize_t size() const noexcept {
-		return std::popcount(_presence_flags);
-	}
-
-	constexpr uint64 presence() const noexcept {
-		return _presence_flags;
-	}
-
-private:
-	template <size_t... Ns>
-	constexpr void _destroy(std::index_sequence<Ns...>) {
-#ifdef __cpp_lib_is_implicit_lifetime
-		if constexpr (std::is_implicit_lifetime<T>) {
-			return;
-		} else
-#else
-		{
-			constexpr auto fun = []<size_t N>(uint64 flags, storage<T>* array) constexpr noexcept {
-				if (flags & (1_u64 << N)) {
-					array[N].destroy();
-				}
-			};
-			(fun.template operator()<Ns>(_presence_flags, _storage), ...);
-		}
-#endif
-	}
-
-	template <size_t... Ns>
-	constexpr void _copy(const hive_block &rhs, std::index_sequence<Ns...>) noexcept (std::is_nothrow_copy_constructible_v<T>)
-	requires (std::is_copy_constructible_v<T>) {
-		constexpr auto fun = []<size_t N>(uint64 flags, hive_block* me, storage<T> *other) constexpr noexcept (std::is_nothrow_copy_constructible_v<T>) {
-			if (flags & (1_u64 << N)) {
-				me->_storage[N].emplace(other[N].get());
-				if constexpr (!std::is_nothrow_copy_constructible_v<T>)
-					me->_presence_flags |= (1_u64 << N);
-			}
-		};
-
-		(fun.template operator()<Ns>(_presence_flags, this, rhs._storage), ...);
-	}
-
-	template <size_t... Ns>
-	constexpr void _move(hive_block &rhs, std::index_sequence<Ns...>) noexcept (std::is_nothrow_move_constructible_v<T>)
-	requires (std::is_move_constructible_v<T>) {
-		constexpr auto fun = []<size_t N>(uint64 flags, hive_block* me, storage<T> *other) constexpr noexcept (std::is_nothrow_move_constructible_v<T>) {
-			if (flags & (1_u64 << N)) {
-				me->_storage[N].emplace(std::move(other[N]).get());
-				if constexpr (!std::is_nothrow_move_constructible_v<T>)
-					me->_presence_flags |= (1_u64 << N);
-			}
-		};
-
-		(fun.template operator()<Ns>(_presence_flags, this, rhs._storage), ...);
-	}
-
-	uint64             _presence_flags{0};
-	detail::storage<T> _storage[64];
-};
-
-inline constexpr size_t hive_page_target_size = 24 * 1024;
+inline constexpr ssize_t hive_page_num_skipfields = std::max(1_sst, lossless_cast<ssize_t>((hive_page_target_size / sizeof(T)) / 64));
 
 template <typename T>
-inline constexpr size_t hive_page_num_fields = std::max(hive_page_target_size / sizeof(T), std::size_t{64}) / std::size_t{64};
-
-template <typename T>
-inline constexpr size_t hive_page_extent = hive_page_num_fields<T> * std::size_t{64};
-
-template <typename T>
-inline constexpr size_t hive_block_size = sizeof(hive_block<T>);
-
-template <typename T>
-inline constexpr size_t hive_blocks_per_page = sizeof(hive_block<T>) * 32;
-
-template <typename T>
-requires (sizeof(T) * 32 < 63 * 1024)
-inline constexpr size_t hive_blocks_per_page<T> = ((63 * 1024) / hive_block_size<T>);
+inline constexpr ssize_t hive_page_num_elements = hive_page_num_skipfields<T> * 64;
 
 template <typename T>
 union hive_storage {
-	constexpr hive_storage() noexcept : dummy{} {}
-	constexpr hive_storage(const hive_storage&) noexcept : dummy{} {}
-	constexpr hive_storage(hive_storage&&) noexcept : dummy{} {}
-	constexpr ~hive_storage() {};
+	constexpr hive_storage() noexcept requires (std::is_trivially_default_constructible_v<T>) = default;
+	constexpr hive_storage() noexcept(std::is_nothrow_constructible<T>) requires (!std::is_trivially_default_constructible_v<T>) : dummy{} {}
+	constexpr hive_storage(hive_storage const&) noexcept requires (std::is_trivially_copy_constructible_v<T>) = default;
+	constexpr hive_storage(hive_storage&&) noexcept requires (std::is_trivially_move_constructible_v<T>) = default;
+	constexpr hive_storage(T const& rhs) requires (std::is_copy_constructible_v<T>) : value(rhs) {}
+	constexpr hive_storage(T&& rhs) requires (std::is_move_constructible_v<T>) : value(std::move(rhs)) {}
+	constexpr ~hive_storage() {}
+
+	template <typename... Args>
+	T& emplace(Args&&... args) {
+		return *std::construct_at(std::addressof(value), std::forward<Args>(args)...);
+	}
+
+	void destroy() {
+		std::destroy_at(std::addressof(value));
+	}
 
 	empty dummy;
 	T value;
@@ -289,172 +49,260 @@ union hive_storage {
 template <typename T>
 requires (std::is_trivial_v<T>)
 union hive_storage<T> {
+	template <typename... Args>
+	T& emplace(Args&&... args) {
+		return *std::construct_at(&value, std::forward<Args>(args)...);
+	}
+
+	void destroy() const noexcept {}
+
 	T value;
 };
 
 template <typename T>
-class hive_page {
+class hive_page_base;
+
+template <typename T>
+requires (std::is_trivial_v<T>)
+class hive_page_base<T> {
+protected:
+	friend class hive<T>;
+
+	ssize_t                                                   global_index_of_first{};
+	uint64                                                    _skipfields[hive_page_num_elements<T>];
+	std::array<hive_storage<T>, hive_page_num_elements<T>> data{};
+};
+
+template <typename T>
+class hive_page_base {
 public:
-	constexpr hive_page() = default;
+	constexpr hive_page_base() noexcept = default;
 
-	constexpr hive_page(const hive_page& rhs) noexcept requires (std::is_trivially_copy_constructible_v<T>) = default;
-	constexpr hive_page(const hive_page& rhs) noexcept(std::is_nothrow_copy_constructible_v<T>) requires (std::is_copy_constructible_v<T> && !std::is_trivially_copy_constructible_v<T>) {
-		for (size_t i = 0; i < hive_page_num_fields<T>; ++i) {
+	constexpr hive_page_base(const hive_page_base& rhs) noexcept(std::is_nothrow_copy_constructible_v<T>) requires (std::is_copy_constructible_v<T>) {
+		for (size_t i = 0; i < hive_page_num_skipfields<T>; ++i) {
+			auto rhs_field = rhs._skipfields[i];
+
+			if (rhs_field == 0) {
+				continue;
+			}
 			for (size_t j = 0; j < 64; ++j) {
-				if ((rhs._skipfields[1_st << j] & 63) != 0) {
-					std::construct_at(&_storage[i * 64 + j], rhs._storage[i * 64 + j]);
+				size_t flag = (1_st << j);
+				size_t idx = (i << 6) | j;
+				if ((rhs_field & flag) != 0) {
+					data[idx].emplace(rhs.data[idx].value);
+					if constexpr (!std::is_nothrow_copy_constructible_v<T>) {
+						_skipfields[i] |= flag;
+					}
+				}
+				if constexpr (std::is_nothrow_copy_constructible_v<T>) {
+					_skipfields[i] = rhs_field;
 				}
 			}
-			_skipfields[i] = rhs._skipfields[i];
 		}
 	}
-	
-	constexpr hive_page(hive_page&& rhs) noexcept requires (std::is_trivially_move_constructible_v<T>) = default;
-	constexpr hive_page(hive_page&& rhs) noexcept(std::is_nothrow_move_constructible_v<T>) requires (std::is_move_constructible_v<T> && !std::is_trivially_move_constructible_v<T>) {
-		for (size_t i = 0; i < hive_page_num_fields<T>; ++i) {
+	constexpr hive_page_base(hive_page_base&& rhs) noexcept(std::is_nothrow_move_constructible_v<T>) requires (std::is_move_constructible_v<T>) {
+		for (size_t i = 0; i < hive_page_num_skipfields<T>; ++i) {
+			auto rhs_field = rhs._skipfields[i];
+
+			if (rhs_field == 0) {
+				continue;
+			}
 			for (size_t j = 0; j < 64; ++j) {
-				if ((rhs._skipfields[1_st << j] & 63) != 0) {
-					std::construct_at(&_storage[i * 64 + j], std::move(rhs._storage[i * 64 + j]));
+				size_t flag = (1_st << j);
+				size_t idx = (i << 6) | j;
+				if ((rhs_field & flag) != 0) {
+					data[idx].emplace(rhs.data[idx].value);
+					if constexpr (!std::is_nothrow_move_constructible_v<T>) {
+						_skipfields[i] |= flag;
+					}
+				}
+				if constexpr (std::is_nothrow_move_constructible_v<T>) {
+					_skipfields[i] = rhs_field;
 				}
 			}
-			_skipfields[i] = rhs._skipfields[i];
 		}
 	}
-	
-	constexpr ~hive_page() noexcept requires (std::is_trivially_destructible_v<T>) = default;
-	constexpr ~hive_page() noexcept requires (!std::is_trivially_destructible_v<T>) {
-		for (size_t i = 0; i < hive_page_num_fields<T>; ++i) {
-			for (size_t j = 0; j < 64; ++j) {
-				if ((_skipfields[1_st << j] & 63) != 0) {
-					std::destroy_at(&_storage[i * 64_st + j]);
-				}
-			}
-		}
+	constexpr ~hive_page_base() noexcept requires (std::is_trivially_destructible_v<T>) = default;
+	constexpr ~hive_page_base() noexcept(std::is_nothrow_destructible_v<T>) requires (!std::is_trivially_destructible_v<T>) {
 	}
 
-	constexpr hive_page& operator=(const hive_page& rhs) noexcept requires (std::is_trivially_copy_constructible_v<T> && std::is_trivially_copy_assignable_v<T>) = default;
-	constexpr hive_page& operator=(const hive_page& rhs) noexcept(std::is_nothrow_copy_constructible_v<T>) requires (std::is_copy_constructible_v<T> && !std::is_trivially_copy_constructible_v<T>) {
-		for (size_t i = 0; i < hive_page_num_fields<T>; ++i) {
+	constexpr hive_page_base& operator=(const hive_page_base& rhs) noexcept(is_nothrow_copyable<T> && std::is_nothrow_destructible_v<T>) requires (is_copyable<T>) {
+		constexpr auto nothrow = is_nothrow_copyable<T> && std::is_nothrow_destructible_v<T>;
+
+		for (size_t i = 0; i < hive_page_num_skipfields<T>; ++i) {
+			auto rhs_field = rhs._skipfields[i];
+			auto &lhs_field = _skipfields[i];
+
 			for (size_t j = 0; j < 64; ++j) {
-				if ((rhs._skipfields[i] & (1_st << j)) == 0) {
-					if ((_skipfields[i] & (1_st << j)) != 0) {
-						std::destroy_at(&_storage[(i << 6_st) | j].value);
+				size_t flag = (1_st << j);
+				size_t idx = (i << 6) | j;
+				if ((lhs_field & flag) != 0) {
+					if ((rhs_field & flag) != 0) {
+						data[idx].value = rhs.data[idx].value;
+					} else {
+						data[idx].destroy();
+						if constexpr (!nothrow) {
+							lhs_field &= ~flag;
+						}
 					}
 				} else {
-					if ((_skipfields[i] & (1_st << j)) != 0) {
-						_storage[(i << 6_st) | j].value = rhs._storage[(i << 6) | j].value;
-					} else {
-						std::construct_at(&_storage[(i << 6) | j].value, _storage[(i << 6) | j].value);
+					if ((rhs_field & flag) != 0) {
+						data[idx].emplace(rhs.data[idx].value);
+						if constexpr (!nothrow) {
+							lhs_field |= flag;
+						}
 					}
 				}
+				if constexpr (nothrow) {
+					_skipfields[i] = rhs_field;
+				}
 			}
-			_skipfields[i] = rhs._skipfields[i];
 		}
 		return *this;
 	}
 
-	constexpr hive_page& operator=(hive_page&& rhs) noexcept requires (std::is_trivially_move_constructible_v<T> && std::is_trivially_move_assignable_v<T>) = default;
-	constexpr hive_page& operator=(hive_page&& rhs) noexcept(std::is_nothrow_move_constructible_v<T>) requires (std::is_move_constructible_v<T> && !std::is_trivially_move_constructible_v<T>) {
-		for (size_t i = 0; i < hive_page_num_fields<T>; ++i) {
+	constexpr hive_page_base& operator=(hive_page_base&& rhs) noexcept(is_nothrow_moveable<T>) requires (is_moveable<T>) {
+		constexpr auto nothrow = is_nothrow_copyable<T> && std::is_nothrow_destructible_v<T>;
+
+		for (size_t i = 0; i < hive_page_num_skipfields<T>; ++i) {
+			auto rhs_field = rhs._skipfields[i];
+			auto &lhs_field = _skipfields[i];
+
 			for (size_t j = 0; j < 64; ++j) {
-				if ((rhs._skipfields[i] & (1_st << j)) == 0) {
-					if ((_skipfields[i] & (1_st << j)) != 0) {
-						std::destroy_at(&_storage[(i << 6_st) | j].value);
+				size_t flag = (1_st << j);
+				size_t idx = (i << 6) | j;
+				if ((lhs_field & flag) != 0) {
+					if ((rhs_field & flag) != 0) {
+						data[idx].value = std::move(rhs.data[idx].value);
+					} else {
+						data[idx].destroy();
+						if constexpr (!nothrow) {
+							lhs_field &= ~flag;
+						}
 					}
 				} else {
-					if ((_skipfields[i] & (1_st << j)) != 0) {
-						_storage[(i << 6_st) | j].value = std::move(rhs._storage[(i << 6) | j].value);
-					} else {
-						std::construct_at(&_storage[(i << 6) | j].value, std::move(_storage[(i << 6) | j].value));
+					if ((rhs_field & flag) != 0) {
+						data[idx].emplace(std::move(rhs.data[idx].value));
+						if constexpr (!nothrow) {
+							lhs_field |= flag;
+						}
 					}
 				}
+				if constexpr (nothrow) {
+					_skipfields[i] = rhs_field;
+				}
 			}
-			_skipfields[i] = rhs._skipfields[i];
 		}
 		return *this;
 	}
 
-	constexpr bool has(std::size_t idx) const noexcept {
-		return (_skipfields[idx >> 6] & (1_st << idx)) != 0;
-	}
+protected:
+	friend class hive<T>;
 
-	template <typename... Args>
-	constexpr T& emplace_at(std::size_t idx, Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) {
-		SHION_ASSERT(!has(idx));
+	ssize_t                                                   global_index_of_first{};
+	uint64                                                    _skipfields[hive_page_num_skipfields<T>];
+	std::array<hive_storage<T>, hive_page_num_elements<T>> data{};
+};
 
-		T* ret = std::construct_at(&_storage[idx].value, std::forward<Args>(args)...);
-		_skipfields[idx << 6_st] |= (1_st << (idx & 63));
-		return *ret;
-	}
-
-	template <typename... Args>
-	constexpr T& retrieve(std::size_t idx) noexcept {
-		SHION_ASSERT(has(idx));
-
-		return _storage[idx].value;
-	}
-
-	template <typename... Args>
-	constexpr T const& retrieve(std::size_t idx) const noexcept {
-		SHION_ASSERT(has(idx));
-
-		return _storage[idx].value;
-	}
-
-	constexpr void erase(ssize_t idx) noexcept(std::is_nothrow_destructible_v<T>) {
-		SHION_ASSERT(has(idx));
-
-		std::destroy_at(&_storage[idx].value);
-		_skipfields[idx << 6_st] &= ~(1_st << (idx & 63));
-	}
-
-	constexpr ssize_t first_free() const noexcept {
-		for (auto i = 0; i < hive_page_num_fields<T>; ++i) {
-			auto num_one = std::countr_one(_skipfields[i]);
-			if (num_one != 64) {
-				return i * 64 + num_one;
+template <typename T>
+class hive_page : public hive_page_base<T> {
+public:
+	constexpr hive_page() noexcept = default;
+	ssize_t find_last() const noexcept {
+		for (auto i = hive_page_num_skipfields<T> - 1; i > 0; --i) {
+			auto count = std::countr_zero(this->_skipfields[i]);
+			if (count < 64) {
+				return (i << 6) + count;
 			}
 		}
-		return hive_page_num_fields<T> * 64;
+		return -1;
 	}
 
-	constexpr ssize_t first_present() const noexcept {
-		for (auto i = 0; i < hive_page_num_fields<T>; ++i) {
-			auto num_zero = std::countr_zero(_skipfields[i]);
-			if (num_zero != 64) {
-				return i * 64 + num_zero;
+	bool has(ssize_t index) const noexcept {
+		return (this->_skipfields[index >> 6] & (1_u64 << (index & 63))) != 0;
+	}
+
+	void erase(ssize_t index) noexcept {
+		SHION_ASSERT(has(index));
+
+		this->data[index].destroy();
+		this->_skipfields[index >> 6] &= ~(1_u64 << (index & 63));
+	}
+
+	template <typename... Args>
+	ssize_t try_emplace(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) {
+		for (auto i = 0; i < hive_page_num_skipfields<T>; ++i) {
+			auto count = std::countr_one(this->_skipfields[i]);
+			if (count < 64) {
+				ssize_t index = (i << 6) | count;
+				this->data[index].emplace(std::forward<Args>(args)...);
+				this->_skipfields[i] |= (1_u64 << count);
+				return index;
 			}
 		}
-		return hive_page_num_fields<T> * 64;
+		return -1;
 	}
 
-private:
+	template <typename... Args>
+	void emplace_at(std::size_t index, Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) {
+		auto& skipfield = this->_skipfields[index << 6];
+		auto flag = (1_u64 << (index & 63));
 
-	constexpr void _destroy_at(ssize_t idx) noexcept(std::is_nothrow_destructible_v<T>) {
-		auto skipfield = idx >> ssize_t{6};
-		if ((_skipfields[skipfield] & (1 << (idx & 63))) != 0) {
-			std::destroy_at(_storage[idx]);
+		SHION_ASSERT((skipfield & flag) == 0);
+		this->data[index].emplace(std::forward<Args>(args)...);
+		skipfield |= flag;
+	}
+
+	ssize_t find_at_least(ssize_t idx) const noexcept {
+		ssize_t skipfield_idx = idx >> 6;
+		auto count = std::countr_zero(this->_skipfields[skipfield_idx] & (~0_u64 << (idx & 63)));
+		if (count < 64)
+			return (skipfield_idx << 6) | count;
+		++skipfield_idx;
+		while (skipfield_idx < hive_page_num_skipfields<T>) {
+			count = std::countr_zero(this->_skipfields[skipfield_idx]);
+			if (count < 64)
+				return (skipfield_idx << 6) | count;
+			++skipfield_idx;
 		}
+		return -1;
 	}
 
-	uint64 _skipfields[hive_page_num_fields<T>]{};
-	hive_storage<T> _storage[hive_page_extent<T>];
+	T& retrieve(ssize_t index) noexcept {
+		SHION_ASSERT(has(index));
+
+		return this->data[index].value;
+	}
+
+	T const& retrieve(ssize_t index) const noexcept {
+		SHION_ASSERT(has(index));
+
+		return this->data[index].value;
+	}
+
+	ssize_t get_from_address(std::add_const_t<T>* element) const noexcept {
+		intptr_t addr = reinterpret_cast<intptr_t>(element);
+		intptr_t start = reinterpret_cast<intptr_t>(this->data.data());
+		intptr_t end = reinterpret_cast<intptr_t>(this->data.data() + this->data.size());
+
+		if (addr < start || addr >= end)
+			return -1;
+
+		ssize_t hint = (addr - start) / sizeof(storage<T>);
+
+		if (has(hint) && std::addressof(this->data[hint].value) == element) {
+			return hint;
+		}
+		return -1;
+	}
 };
 
 }
 
 template <typename T>
 class hive {
-	inline constexpr static size_t blocks_per_page = detail::hive_blocks_per_page<T>;
-	inline constexpr static ssize_t sblocks_per_page = shion::lossless_cast<ssize_t>(detail::hive_blocks_per_page<T>);
-
-	struct page {
-		ssize_t                                            global_index_of_first{};
-		std::array<detail::hive_block<T>, blocks_per_page> data{};
-	};
-
-	using page_iterator = typename std::list<page>::iterator;
-	using page_riterator = typename std::list<page>::reverse_iterator;
+	using page_iterator = typename std::list<detail::hive_page<T>>::iterator;
+	using page_riterator = typename std::list<detail::hive_page<T>>::reverse_iterator;
 
 public:
 	template <value_type ValueType>
@@ -486,7 +334,7 @@ public:
 		}
 
 		constexpr decltype(auto) operator*() const noexcept {
-			return forward_like_type<ValueType>(_current_page_it->data[_index >> 6].retrieve(_index & 63));
+			return forward_like_type<ValueType>(_current_page_it->retrieve(_index - _current_page_it->global_index_of_first));
 		}
 
 		constexpr auto operator->() const noexcept {
@@ -510,26 +358,22 @@ public:
 			if (index > h->_last) {
 				return {};
 			}
-			detail::hive_block<T>*current_block;
 			page_iterator         page_it = page_start;
-			ssize_t               idx_in_page = index - page_it->global_index_of_first;
 
-			while (page_it != h->_pages.end()) {
-				while (idx_in_page < sblocks_per_page * 64) {
-					current_block = &page_it->data[idx_in_page >> 6];
-					auto to_end_of_block = 64 - (idx_in_page & 63);
-					auto to_next_one = std::countr_zero(current_block->presence() >> (index & 63));
-
-					if (to_next_one >= to_end_of_block) {
-						index += to_end_of_block;
-						idx_in_page += to_end_of_block;
-					} else {
-						return {h, page_it, index + to_next_one};
+			while (true) {
+				SHION_ASSERT(page_it != h->_pages.end()); // Should have been caught by `_index > h->_last` -- `h->_last` is wrong -- race condition?
+				ssize_t idx_in_page = index - page_it->global_index_of_first;
+				if (idx_in_page < detail::hive_page_num_elements<T>) {
+					if (idx_in_page < 0) {
+						idx_in_page = 0;
+					}
+					idx_in_page = page_it->find_at_least(idx_in_page);
+					if (idx_in_page >= 0) {
+						return {h, page_it, idx_in_page + page_it->global_index_of_first};
 					}
 				}
 				++page_it;
 			}
-			SHION_ASSERT(false); // Should have been caught by `_index == _hive->_last` -- `_hive->_last` is wrong -- race condition?
 			return {};
 		}
 
@@ -595,29 +439,25 @@ public:
 	requires (std::constructible_from<T, Args...>)
 	constexpr iterator emplace(Args&&... args) {
 		iterator result{};
-		ssize_t                                block_idx;
-		ssize_t                                free_idx;
-		ssize_t                                first_in_page = 0;
 		page_iterator                          page_it;
+		ssize_t first_in_page = 0;
 
 		for (page_it = _pages.begin(); page_it != _pages.end(); ++page_it) {
-			for (block_idx = 0; block_idx < sblocks_per_page; ++block_idx) {
-				detail::hive_block<T>& block = page_it->data[block_idx];
-				if (free_idx = block.first_free(); detail::valid_hive_block_idx(free_idx)) {
-					block.emplace_at(free_idx, std::forward<Args>(args)...);
-					ssize_t global_idx = first_in_page + (block_idx << 6) | free_idx;
-					result = {this, _pages.begin(), global_idx};
-					++_size;
-					if (global_idx > _last)
-						_last = global_idx;
-					return result;
-				}
+			first_in_page = page_it->global_index_of_first;
+			if (auto idx = page_it->try_emplace(std::forward<Args>(args)...); idx >= 0) {
+				auto global_idx = first_in_page + idx;
+				result = {this, page_it, global_idx};
+				++_size;
+				if (global_idx > _last)
+					_last = global_idx;
+				return result;
 			}
-			first_in_page += sblocks_per_page << 6;
+			first_in_page += detail::hive_page_num_elements<T>;
 		}
 
-		page_it = _pages.emplace(_pages.end(), first_in_page);
-		page_it->data[0].emplace_at(0, std::forward<Args>(args)...);
+		page_it = _pages.emplace(_pages.end());
+		page_it->global_index_of_first = first_in_page;
+		page_it->emplace_at(0, std::forward<Args>(args)...);
 		result = {this, page_it, first_in_page};
 		++_size;
 		_last = first_in_page;
@@ -625,7 +465,7 @@ public:
 	}
 
 	constexpr iterator get_iterator(std::add_const_t<T>* element) noexcept {
-		// We cast all pointers to intptr_t because comparing invalid pointers is undefined behavior
+		// We cast all pointers to intptr_t because comparing incompatible pointers is undefined behavior
 		intptr_t as_int = reinterpret_cast<intptr_t>(element);
 
 		for (page_iterator page_it = _pages.begin(); page_it != _pages.end(); ++page_it) {
@@ -634,14 +474,8 @@ public:
 			intptr_t end_as_int = reinterpret_cast<intptr_t>(&(*page_it->data.rbegin())) + 1;
 
 			if (as_int >= begin_as_int && as_int < end_as_int) {
-				ssize_t hint = (as_int - begin_as_int - sizeof(page::global_index_of_first));
-				ssize_t block_idx = hint / sizeof(detail::hive_block<T>);
-				detail::hive_block<T>* block = &page_it->data[block_idx];
-				ssize_t block_addr = reinterpret_cast<intptr_t>(block);
-				ssize_t elem_in_block_idx = ((as_int - block_addr - sizeof(block->presence())) / sizeof(T)) & 63;
-
-				if (block->has(elem_in_block_idx) && &block->retrieve(elem_in_block_idx) == element) {
-					return {this, page_it, index_of_page + (block_idx << 6) | elem_in_block_idx};
+				if (auto idx = page_it->get_from_address(element); idx >= 0) {
+					return {this, page_it, page_it->global_index_of_first + idx};
 				}
 			}
 		}
@@ -652,15 +486,8 @@ public:
 		if (size() == 0 || index > _last)
 			return end();
 
-		auto page_it = _pages.begin();
-		while (index > sblocks_per_page << 6) {
-			index -= sblocks_per_page;
-			++page_it;
-		}
-
-		SHION_ASSERT(page_it != _pages.end());
-		auto &block = page_it->data[index >> 6];
-		if (!block.has(index & 63)) {
+		auto page_it = _get_page(index);
+		if (page_it == _pages.end() || !page_it->has(index - page_it->global_index_of_first)) {
 			return end();
 		}
 		return {this, page_it, index};
@@ -675,7 +502,7 @@ public:
 	}
 
 	constexpr ssize_t capacity() const noexcept {
-		return shion::lossless_cast<ssize_t>((blocks_per_page * _pages.size()) * 64);
+		return shion::lossless_cast<ssize_t>(detail::hive_page_num_elements<T> * _pages.size());
 	}
 
 	constexpr ssize_t size() const noexcept {
@@ -687,24 +514,43 @@ public:
 	}
 
 	constexpr ssize_t page_size_bytes() const noexcept {
-		return sizeof(page);
+		return sizeof(detail::hive_page<T>);
 	}
 
 	constexpr ssize_t page_capacity() const noexcept {
-		return sblocks_per_page * 64;
+		return detail::hive_page_num_elements<T>;
 	}
 
 private:
+	constexpr auto _get_page(ssize_t idx) const noexcept {
+		auto page_it = _pages.begin();
+		while (page_it != _pages.end()) {
+			if (idx - page_it->global_index_of_first < detail::hive_page_num_elements<T>) {
+				return page_it;
+			}
+			++page_it;
+		}
+		return _pages.end();
+	}
+
+	constexpr auto _get_page(ssize_t idx) noexcept {
+		auto page_it = _pages.begin();
+		while (page_it != _pages.end()) {
+			if (idx - page_it->global_index_of_first < detail::hive_page_num_elements<T>) {
+				return page_it;
+			}
+			++page_it;
+		}
+		return _pages.end();
+	}
+
 	template <value_type ValueType>
 	basic_iterator<ValueType> _erase(basic_iterator<ValueType> it) noexcept(std::is_nothrow_destructible_v<T>) {
 		SHION_ASSERT(it._is_valid_hive_iterator());
 
 		page_riterator         owning_page = page_riterator{std::next(it._current_page_it)};
-		ssize_t                index_in_page = it._index - owning_page->global_index_of_first;
-		ssize_t                block_idx = index_in_page >> 6;
-		detail::hive_block<T>* block = &owning_page->data[block_idx];
 
-		block->erase(index_in_page & 63);
+		owning_page->erase(it._index - owning_page->global_index_of_first);
 		if (--_size == 0) {
 			_last = -1;
 			return {};
@@ -715,14 +561,9 @@ private:
 		}
 
 		while (owning_page != _pages.rend()) {
-			while (block_idx >= 0) {
-				block = &owning_page->data[block_idx];
-				ssize_t present_in_block = block->first_present();
-				if (detail::valid_hive_block_idx(present_in_block)) {
-					_last = owning_page->global_index_of_first + (block_idx << 6) + present_in_block;
-					return it++;
-				}
-				--block_idx;
+			if (auto last = owning_page->find_last(); last >= 0) {
+				_last = last + owning_page->global_index_of_first;
+				return {};
 			}
 			++owning_page;
 		}
@@ -732,7 +573,7 @@ private:
 
 	ssize_t         _size{0};
 	ssize_t         _last{-1};
-	std::list<page> _pages;
+	std::list<detail::hive_page<T>> _pages;
 };
 
 }
