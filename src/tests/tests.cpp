@@ -1,4 +1,5 @@
 #include "tests.hpp"
+#include "containers.hpp"
 
 namespace shion::tests {
 
@@ -6,7 +7,8 @@ std::vector<test_suite> init() {
 	std::vector<test_suite> ret;
 
 	auto& containers = ret.emplace_back("Containers");
-	containers.make_test("hive", "hive", hive_test);
+	containers.make_test("hive with trivial type", &hive_test_trivial);
+	containers.make_test("hive with non-trivial type", &hive_test_nontrivial);
 
 	return ret;
 }
@@ -65,11 +67,6 @@ void test::run() {
 
 auto test::get_name() const noexcept -> const std::string& {
 	return (name);
-}
-
-
-auto test::get_description() const noexcept -> const std::string& {
-	return (description);
 }
 
 auto test::get_status() const noexcept -> status {

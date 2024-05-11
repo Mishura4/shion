@@ -5,6 +5,9 @@
 
 namespace shion::tests {
 
+void hive_test_nontrivial(test& self);
+void hive_test_trivial(test& self);
+
 }
 
 #endif

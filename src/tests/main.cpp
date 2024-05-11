@@ -79,32 +79,32 @@ int main() {
 		size_t failed = 0;
 		g_logger->info("\nSuite {}:", suite.name);
 		for (const tests::test &t : suite.tests) {
-			static constexpr char fmt_str[] = "  {: <20}{: <24}{} ({})";
+			static constexpr char fmt_str[] = "  {: <20}{} ({})";
 			using enum tests::test::status;
 
 			++count;
 			switch (t.get_status()) {
 				case not_executed:
-					g_logger->info(fmt_str, tests::not_executed_str, t.get_name(), t.get_description(), t.get_duration());
+					g_logger->info(fmt_str, tests::not_executed_str, t.get_name(), t.get_duration());
 					++failed;
 					break;
 
 				case skipped:
-					g_logger->info(fmt_str, tests::skipped_str, t.get_name(), t.get_description(), t.get_duration());
+					g_logger->info(fmt_str, tests::skipped_str, t.get_name(), t.get_duration());
 					break;
 
 				case started:
 				case timeout:
-					g_logger->info(fmt_str, tests::timeout_str, t.get_name(), t.get_description(), t.get_duration());
+					g_logger->info(fmt_str, tests::timeout_str, t.get_name(), t.get_duration());
 					++failed;
 					break;
 
 				case success:
-					g_logger->info(fmt_str, tests::success_str, t.get_name(), t.get_description(), t.get_duration());
+					g_logger->info(fmt_str, tests::success_str, t.get_name(), t.get_duration());
 					break;
 
 				case failure:
-					g_logger->info(fmt_str, tests::failure_str, t.get_name(), t.get_description(), t.get_duration());
+					g_logger->info(fmt_str, tests::failure_str, t.get_name(), t.get_duration());
 					++failed;
 					break;
 			}

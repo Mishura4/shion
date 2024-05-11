@@ -35,8 +35,8 @@ public:
 	test() = default;
 
 	template <typename Fun>
-	test(std::string n, std::string desc, Fun&& function) :
-		name{std::move(n)}, description{std::move(desc)}, fun{std::forward<Fun>(function)}
+	test(std::string n, Fun&& function) :
+		name{std::move(n)}, fun{std::forward<Fun>(function)}
 	{}
 
 	test(const test &) = delete;
@@ -63,13 +63,10 @@ public:
 
 	const std::string& get_name() const noexcept;
 
-	const std::string& get_description() const noexcept;
-
 private:
 	app_time start_time;
 	app_time end_time;
 	std::string name = {};
-	std::string description = {};
 	std::function<void(test&)> fun = {};
 	status state = status::not_executed;
 };
@@ -80,8 +77,8 @@ struct test_suite {
 
 	template <typename Fun>
 	requires (std::is_invocable_r_v<void, Fun, test&>)
-	test &make_test(std::string n, std::string desc, Fun fun) {
-		return (tests.emplace_back(std::move(n), std::move(desc), std::forward<Fun>(fun)));
+	test &make_test(std::string n, Fun fun) {
+		return (tests.emplace_back(std::move(n), std::forward<Fun>(fun)));
 	}
 };
 
@@ -90,8 +87,6 @@ std::vector<test_suite> init();
 inline std::optional<logger> g_logger;
 
 test_suite &make_test_suite(std::string name);
-
-void hive_test(test& self);
 
 struct test_failure_exception : internal_exception {
 	using internal_exception::internal_exception;
