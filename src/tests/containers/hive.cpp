@@ -138,6 +138,56 @@ void hive_test(test& self) {
 	TEST_ASSERT(self, it == h.begin() && std::addressof(*it) == std::addressof(*h.begin()));
 	it = it.erase();
 	TEST_ASSERT(self, h.begin() == h.end() && h.size() == 0);
+	h.clear();
+	TEST_ASSERT(self, h.capacity() == 0);
+	auto result = h.try_emplace(42, 42);
+	TEST_ASSERT(self, result.second);
+	TEST_ASSERT(self, *result.first == 42);
+	TEST_ASSERT(self, result.first == h.begin() && (++result.first) == h.end());
+	result = h.try_emplace(42, 69);
+	TEST_ASSERT(self, result.second == false);
+	TEST_ASSERT(self, *result.first == 42);
+	TEST_ASSERT(self, result.first == h.begin() && (++result.first) == h.end());
+	result = h.try_emplace(21, 21);
+	TEST_ASSERT(self, result.second);
+	TEST_ASSERT(self, *result.first == 21);
+	TEST_ASSERT(self, result.first == h.begin() && *(++result.first) == 42);
+	result = h.try_emplace(69, 69);
+	TEST_ASSERT(self, result.second);
+	TEST_ASSERT(self, *result.first == 69);
+	TEST_ASSERT(self, *h.begin() == 21 && (++result.first) == h.end());
+	result = h.try_emplace(4 * detail::hive_page_num_elements<T>, 4 * detail::hive_page_num_elements<T>);
+	TEST_ASSERT(self, result.second);
+	TEST_ASSERT(self, *result.first == 4 * detail::hive_page_num_elements<T>);
+	TEST_ASSERT(self, *h.begin() == 21 && (++result.first) == h.end());
+	result = h.try_emplace(2 * detail::hive_page_num_elements<T>, 2 * detail::hive_page_num_elements<T>);
+	TEST_ASSERT(self, result.second);
+	TEST_ASSERT(self, *result.first == 2 * detail::hive_page_num_elements<T>);
+	TEST_ASSERT(self, *h.begin() == 21 && *(++result.first) == 4 * detail::hive_page_num_elements<T>);
+	TEST_ASSERT(self, h.pages() == 3);
+	TEST_ASSERT(self, h.size() == 5);
+
+
+	if constexpr (std::is_copy_constructible_v<T>) {
+		TEST_ASSERT(self, std::is_copy_constructible_v<hive>);
+	} else {
+		TEST_ASSERT(self, !std::is_copy_constructible_v<hive>);
+	}
+	if constexpr (std::is_move_constructible_v<T>) {
+		TEST_ASSERT(self, std::is_move_constructible_v<hive>);
+	} else {
+		TEST_ASSERT(self, !std::is_move_constructible_v<hive>);
+	}
+	if constexpr (std::is_copy_assignable_v<T>) {
+		TEST_ASSERT(self, std::is_copy_assignable_v<hive>);
+	} else {
+		TEST_ASSERT(self, !std::is_copy_assignable_v<hive>);
+	}
+	if constexpr (std::is_move_assignable_v<T>) {
+		TEST_ASSERT(self, std::is_move_assignable_v<hive>);
+	} else {
+		TEST_ASSERT(self, !std::is_move_assignable_v<hive>);
+	}
 }
 
 

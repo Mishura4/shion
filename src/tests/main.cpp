@@ -85,17 +85,17 @@ int main() {
 			++count;
 			switch (t.get_status()) {
 				case not_executed:
-					g_logger->info(fmt_str, tests::not_executed_str, t.get_name(), t.get_duration());
+					g_logger->info(fmt_str, tests::not_executed_str, t.get_name(), "N/A");
 					++failed;
 					break;
 
 				case skipped:
-					g_logger->info(fmt_str, tests::skipped_str, t.get_name(), t.get_duration());
+					g_logger->info(fmt_str, tests::skipped_str, t.get_name(), "N/A");
 					break;
 
 				case started:
 				case timeout:
-					g_logger->info(fmt_str, tests::timeout_str, t.get_name(), t.get_duration());
+					g_logger->info(fmt_str, tests::timeout_str, t.get_name(), "N/A");
 					++failed;
 					break;
 
@@ -104,7 +104,7 @@ int main() {
 					break;
 
 				case failure:
-					g_logger->info(fmt_str, tests::failure_str, t.get_name(), t.get_duration());
+					g_logger->info(fmt_str, tests::failure_str, t.get_name(), "N/A");
 					++failed;
 					break;
 			}
