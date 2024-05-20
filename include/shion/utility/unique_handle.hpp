@@ -73,6 +73,10 @@ public:
 		return *std::move(_handle);
 	}
 
+	constexpr T* operator->() const noexcept {
+		return std::addressof(_handle);
+	}
+
 	constexpr void swap(unique_handle& other) noexcept {
 		_destroy();
 		_handle = std::exchange(other._handle, std::nullopt);
@@ -151,6 +155,14 @@ public:
 
 	constexpr decltype(auto) operator*() const&& noexcept {
 		return std::move(*_handle);
+	}
+
+	constexpr auto operator->() const noexcept {
+		if constexpr (std::is_pointer_v<T>) {
+			return _handle;
+		} else {
+			return std::addressof(_handle);
+		}
 	}
 
 	constexpr void swap(unique_handle& other) noexcept {
