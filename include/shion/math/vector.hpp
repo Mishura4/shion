@@ -68,6 +68,34 @@ template <typename T>
 struct vector2 {
 	SHION_DEFINE_TUPLE_ACCESS(2);
 
+	friend constexpr vector2 operator*(vector2 const& lhs, T factor) noexcept {
+		return {lhs.x * factor, lhs.y * factor};
+	}
+
+	friend constexpr vector2 operator*(T factor, vector2 const& rhs) noexcept {
+		return {factor * rhs.x, factor * rhs.y};
+	}
+
+	constexpr vector2& operator*=(T factor) noexcept {
+		x *= factor;
+		y *= factor;
+		return *this;
+	}
+
+	friend constexpr vector2 operator/(vector2 const& lhs, T factor) noexcept {
+		return {lhs.x / factor, lhs.y / factor};
+	}
+
+	friend constexpr vector2 operator/(T factor, vector2 const& rhs) noexcept {
+		return {factor / rhs.x, factor / rhs.y,};
+	}
+
+	constexpr vector2& operator/=(T factor) noexcept {
+		x /= factor;
+		y /= factor;
+		return *this;
+	}
+
 	/**
 	 * @brief The X or "length" coordinate in 2D space.
 	 */
@@ -85,6 +113,36 @@ struct vector2 {
 template <typename T>
 struct vector3 {
 	SHION_DEFINE_TUPLE_ACCESS(3);
+
+	friend constexpr vector3 operator*(vector3 const& lhs, T factor) noexcept {
+		return {lhs.x * factor, lhs.y * factor, lhs.z * factor};
+	}
+
+	friend constexpr vector3 operator*(T factor, vector3 const& rhs) noexcept {
+		return {factor * rhs.x, factor * rhs.y, factor * rhs.z};
+	}
+
+	constexpr vector3& operator*=(T factor) noexcept {
+		x *= factor;
+		y *= factor;
+		z *= factor;
+		return *this;
+	}
+
+	friend constexpr vector3 operator/(vector3 const& lhs, T factor) noexcept {
+		return {lhs.x / factor, lhs.y / factor, lhs.z / factor};
+	}
+
+	friend constexpr vector3 operator/(T factor, vector3 const& rhs) noexcept {
+		return {factor / rhs.x, factor / rhs.y, factor / rhs.z};
+	}
+
+	constexpr vector3& operator/=(T factor) noexcept {
+		x /= factor;
+		y /= factor;
+		z /= factor;
+		return *this;
+	}
 
 	/**
 	 * @brief The X or "length" coordinate in 3D space.
@@ -175,7 +233,7 @@ struct point2 {
 	 * @param other Point to get a vector to
 	 * @return Vector2 to the other point
 	 */
-	auto to(const point2& other) const noexcept {
+	constexpr auto to(const point2& other) const noexcept {
 		if constexpr (std::is_unsigned_v<T>) {
 			using as_signed = std::make_signed_t<T>;
 
@@ -194,7 +252,7 @@ struct point2 {
 	 * @param other Point to get a vector from
 	 * @return Vector2 from the other point
 	 */
-	auto from(const point2& other) const noexcept {
+	constexpr auto from(const point2& other) const noexcept {
 		if constexpr (std::is_unsigned_v<T>) {
 			using as_signed = std::make_signed_t<T>;
 
@@ -214,7 +272,7 @@ struct point2 {
 	 * @return Squared distance to the point
 	 */
 	template <typename U = T>
-	U distance_squared(point2 const& other) const noexcept {
+	constexpr U distance_squared(point2 const& other) const noexcept {
 		if constexpr (std::is_unsigned_v<T> || std::is_unsigned_v<U>) {
 			U dx;
 			U dy;
@@ -251,6 +309,34 @@ struct point2 {
 	 */
 	double distance(point2 const& other) const noexcept {
 		return std::sqrt(distance_squared(other));
+	}
+
+	friend constexpr point2 operator+(point2 const& lhs, vector2<T> const& rhs) noexcept {
+		return {lhs.x + rhs.x, lhs.y + rhs.y};
+	}
+
+	friend constexpr point2 operator+(vector2<T> const& lhs, point2 const& rhs) noexcept {
+		return {lhs.x + rhs.x, lhs.y + rhs.y};
+	}
+
+	friend constexpr point2 operator-(point2 const& lhs, vector2<T> const& rhs) noexcept {
+		return {lhs.x - rhs.x, lhs.y - rhs.y};
+	}
+
+	friend constexpr point2 operator-(vector2<T> const& lhs, point2 const& rhs) noexcept {
+		return {lhs.x - rhs.x, lhs.y - rhs.y};
+	}
+
+	constexpr point2 &operator+=(vector2<T> const& rhs) noexcept {
+		x += rhs.x;
+		y += rhs.y;
+		return *this;
+	}
+
+	constexpr point2 &operator-=(vector2<T> const& rhs) noexcept {
+		x -= rhs.x;
+		y -= rhs.y;
+		return *this;
 	}
 
 	/**
@@ -361,6 +447,36 @@ struct point3 {
 	template <typename U = double>
 	U distance(point3 const& other) const noexcept {
 		return static_cast<U>(std::sqrt(distance_squared(other)));
+	}
+
+	friend constexpr point3 operator+(point3 const& lhs, vector3<T> const& rhs) noexcept {
+		return {lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
+	}
+
+	friend constexpr point3 operator+(vector3<T> const& lhs, point3 const& rhs) noexcept {
+		return {lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
+	}
+
+	friend constexpr point3 operator-(point3 const& lhs, vector3<T> const& rhs) noexcept {
+		return {lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
+	}
+
+	friend constexpr point3 operator-(vector3<T> const& lhs, point3 const& rhs) noexcept {
+		return {lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
+	}
+
+	constexpr point3 &operator+=(vector3<T> const& rhs) noexcept {
+		x += rhs.x;
+		y += rhs.y;
+		z += rhs.z;
+		return *this;
+	}
+
+	constexpr point3 &operator-=(vector3<T> const& rhs) noexcept {
+		x -= rhs.x;
+		y -= rhs.y;
+		z -= rhs.z;
+		return *this;
 	}
 
 	/**
