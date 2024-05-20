@@ -129,12 +129,12 @@ public:
 				continue;
 			} else if (_skipfields[i] == ~0_u64) {
 				for (ssize_t j = 0; j < 64; ++j) {
-					data[(i << 6) | 64].destroy();
+					data[(i << 6) | j].destroy();
 				}
 			} else {
 				for (ssize_t j = 0; j < 64; ++j) {
 					if ((_skipfields[i] & (1_u64 << j)) != 0) {
-						data[(i << 6) | 64].destroy();
+						data[(i << 6) | j].destroy();
 					}
 				}
 			}
