@@ -41,8 +41,8 @@ jobs:
         # GitHub hosted runners on Azure
         # arm7hf is a self-hosted docker-based runner at Brainbox.cc. Raspberry Pi 4, 8gb 4-core with NEON
         cfg:
-          - { arch: 'amd64', concurrency: 2, os: ubuntu-22.04, package: 'clang++', cc: clang, version: 18, cpack: 'no', ctest: 'no', cmake-args: '-DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_EXE_LINKER_FLAGS="-lc++abi"' }
-          - { arch: 'amd64', concurrency: 2, os: ubuntu-22.04, package: 'g++', cc: gcc, version: 13, cpack: 'no', ctest: 'no', cmake-args: '' }
+          - { arch: 'amd64', concurrency: 2, os: ubuntu-24.04, package: 'clang++', cc: clang, version: 18, cpack: 'no', ctest: 'no', cmake-args: '-DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_EXE_LINKER_FLAGS="-lc++abi"' }
+          - { arch: 'amd64', concurrency: 2, os: ubuntu-24.04, package: 'g++', cc: gcc, version: 13, cpack: 'no', ctest: 'no', cmake-args: '' }
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
@@ -52,12 +52,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: Install apt packages
-        run: sudo sed -i 's/azure\.//' /etc/apt/sources.list && sudo apt update && sudo apt-get install -y pkg-config
+      - name: Install GCC
+        if: ${{ matrix.cfg.package == 'g++' }}
+        run: |
+          sudo sed -i 's/azure\.//' /etc/apt/sources.list
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa -y
+          sudo apt update
+          sudo apt-get install -y pkg-config ${{ matrix.cfg.package }}-${{ matrix.cfg.version }} ${{ matrix.cfg.cc }}-${{ matrix.cfg.version }} 
 
       - name: Install LLVM
         if: ${{ matrix.cfg.package == 'clang++' }}
         run: |
+          sudo sed -i 's/azure\.//' /etc/apt/sources.list
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
           sudo apt-add-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-${{ matrix.cfg.version }} main"
           sudo apt update
