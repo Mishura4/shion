@@ -26,7 +26,7 @@ inline constexpr ssize_t hive_page_num_elements = hive_page_num_skipfields<T> * 
 template <typename T>
 union hive_storage {
 	constexpr hive_storage() noexcept requires (std::is_trivially_default_constructible_v<T>) = default;
-	constexpr hive_storage() noexcept(std::is_nothrow_constructible<T>) requires (!std::is_trivially_default_constructible_v<T>) : dummy{} {}
+	constexpr hive_storage() noexcept(std::is_nothrow_constructible_v<T>) requires (!std::is_trivially_default_constructible_v<T>) : dummy{} {}
 	constexpr hive_storage(hive_storage const&) noexcept requires (std::is_trivially_copy_constructible_v<T>) = default;
 	constexpr hive_storage(hive_storage&&) noexcept requires (std::is_trivially_move_constructible_v<T>) = default;
 	constexpr hive_storage(T const& rhs) requires (std::is_copy_constructible_v<T>) : value(rhs) {}

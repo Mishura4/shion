@@ -17,7 +17,6 @@ constexpr inline auto timeout_duration = std::chrono::seconds{60};
 
 struct dthread : std::thread {
 	using thread::thread;
-	using thread::operator=;
 
 	~dthread(){
 		if (joinable())
