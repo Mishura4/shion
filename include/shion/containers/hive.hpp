@@ -542,7 +542,6 @@ public:
 		intptr_t as_int = reinterpret_cast<intptr_t>(element);
 
 		for (page_iterator page_it = _pages.begin(); page_it != _pages.end(); ++page_it) {
-			ssize_t index_of_page = page_it->global_index_of_first;
 			intptr_t begin_as_int = reinterpret_cast<intptr_t>(&(*page_it->data.begin()));
 			intptr_t end_as_int = reinterpret_cast<intptr_t>(&(*page_it->data.rbegin())) + 1;
 
