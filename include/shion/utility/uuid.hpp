@@ -59,37 +59,89 @@ public:
 	
 	constexpr uuid& operator=(const uuid&) noexcept = default;
 	constexpr uuid& operator=(uuid&&) noexcept = default;
-
+	
 	static const uuid nil;
+	static const uuid max;
+
+	static constexpr uuid nil_uuid() noexcept
+	{
+		return uuid{};
+	}
+
+	static constexpr uuid max_uuid() noexcept
+	{
+		uuid ret;
+
+		std::ranges::fill(ret._bytes, static_cast<std::byte>(std::numeric_limits<uint8_t>::max()));
+		return ret;
+	}
 
 	template <typename Random = std::mt19937_64>
 	requires (std::invocable<Random> && std::integral<std::invoke_result_t<Random>>)
-	static constexpr uuid generate_v4(Random&& rand)
+	static constexpr uuid generate_v4(Random&& rand) noexcept (std::is_nothrow_invocable<Random>)
 	{
+		using result = std::invoke_result_t<Random>;
 		uuid ret;
 
 		if (std::is_constant_evaluated())
 		{
-			for (int i = 0; i < 2; ++i) {
-				auto val = static_cast<uint64_t>(rand());
-				for (int j = 0; j < 8; ++j) {
-					ret._bytes[i * 2 + j] = static_cast<std::byte>(val >> ((7 - j) * 8));
+			for (int i = 0; i * sizeof(result) < 16; ++i) {
+				auto val = static_cast<result>(rand());
+				for (int j = 0; j < sizeof(result); ++j) {
+					ret._bytes[i * sizeof(result) + j] = static_cast<std::byte>(val >> ((sizeof(result) - 1 - j) * 8));
 				}
 			}
 		}
 		else
 		{
-			auto val = static_cast<uint64_t>(rand());
-			std::memcpy(&ret._bytes[0], &val, sizeof(val));
-			val = static_cast<uint64_t>(rand());;
-			std::memcpy(&ret._bytes[0] + sizeof(val), &val, sizeof(val));
+			for (int i = 0; i * sizeof(result) < 16; ++i) {
+				auto val = rand();
+				std::memcpy(&ret._bytes[0] + i * sizeof(result), &val, sizeof(result));
+			}
 		}
 		ret._bytes[6] = static_cast<std::byte>((static_cast<unsigned char>(ret._bytes[6]) & 0b00001111) | (4 << 4));
 		ret._bytes[8] = static_cast<std::byte>((static_cast<unsigned char>(ret._bytes[8]) & 0b00111111) | 0b10000000);
 		return ret;
 	}
 
-	static constexpr uuid generate_v4()
+	template <typename Random = std::mt19937_64, typename Duration = std::chrono::milliseconds>
+	requires (std::invocable<Random> && std::integral<std::invoke_result_t<Random>>)
+	static constexpr uuid generate_v7(Random&& rand, std::chrono::time_point<std::chrono::system_clock, Duration> timestamp) noexcept (std::is_nothrow_invocable<Random>)
+	{
+		using result = std::invoke_result_t<Random>;
+		uuid ret;
+		
+		auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(timestamp.time_since_epoch());
+		static_assert(sizeof(dur.count()) >= 6);
+		if (std::is_constant_evaluated())
+		{
+			for (int i = 0; i * sizeof(result) < 16; ++i) {
+				auto val = static_cast<result>(rand());
+				for (int j = 0; j < sizeof(result); ++j) {
+					ret._bytes[i * sizeof(result) + j] = static_cast<std::byte>(val >> ((sizeof(result) - 1 - j) * 8));
+				}
+			}
+			for (int i = 0; i < 6; ++i) {
+				ret._bytes[i] = static_cast<std::byte>(dur.count() >> (6 - 1 - i) * 8);
+			}
+		}
+		else
+		{
+			auto count = (std::endian::native == std::endian::big ? dur.count() : std::byteswap(dur.count()));
+			std::memcpy(&ret._bytes[0], reinterpret_cast<std::byte*>(&count) + sizeof(count) - 6, 6);
+			auto val = rand();
+			std::memcpy(&ret._bytes[0] + 6, &val, 2);
+			for (int i = 0; i * sizeof(result) < 8; ++i) {
+				val = rand();
+				std::memcpy(&ret._bytes[0] + 8 + i * sizeof(result), &val, sizeof(result));
+			}
+		}
+		ret._bytes[6] = static_cast<std::byte>((static_cast<unsigned char>(ret._bytes[6]) & 0b00001111) | (7 << 4));
+		ret._bytes[8] = static_cast<std::byte>((static_cast<unsigned char>(ret._bytes[8]) & 0b00111111) | 0b10000000);
+		return ret;
+	}
+
+	static constexpr uuid generate_v4() noexcept
 	{
 		if (std::is_constant_evaluated()) {
 			return generate_v4([]() constexpr -> uint64_t { return 0x7844784478447844; });
@@ -97,6 +149,17 @@ public:
 			thread_local std::mt19937_64 engine{std::chrono::high_resolution_clock::now().time_since_epoch().count() ^ std::hash<std::thread::id>{}(std::this_thread::get_id())};
 
 			return generate_v4(engine);
+		}
+	}
+
+	static constexpr uuid generate_v7() noexcept
+	{
+		if (std::is_constant_evaluated()) {
+			return generate_v7([]() constexpr -> uint64_t { return 0x7844784478447844; }, {});
+		} else {
+			thread_local std::mt19937_64 engine{std::chrono::high_resolution_clock::now().time_since_epoch().count() ^ std::hash<std::thread::id>{}(std::this_thread::get_id())};
+
+			return generate_v7(engine, std::chrono::system_clock::now());
 		}
 	}
 
@@ -214,14 +277,24 @@ public:
 		return 16;
 	}
 
+	constexpr std::byte operator[](size_t n) const noexcept
+	{
+		return _bytes[n];
+	}
+
 	constexpr operator std::span<const std::byte, 16>() const noexcept
 	{
 		return _bytes;
 	}
 
+	friend constexpr auto operator<=>(const uuid& a, const uuid& b) noexcept = default;
+
 private:
 	alignas(std::uint64_t) std::byte _bytes[16]{};
 };
+
+constexpr inline uuid uuid::nil = uuid::nil_uuid();
+constexpr inline uuid uuid::max = uuid::max_uuid();
 
 }
 
