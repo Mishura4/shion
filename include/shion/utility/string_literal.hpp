@@ -9,29 +9,80 @@
 
 #include "../shion_essentials.hpp"
 
+namespace shion
+{
+
+template <typename CharT, size_t N>
+struct basic_string_literal;
+
+}
+
+template <typename CharT, size_t N>
+struct std::tuple_size<shion::basic_string_literal<CharT, N>>
+{
+	static constexpr size_t value = N + 1;
+};
+
 namespace shion {
 
 template <typename CharT, size_t N>
 struct basic_string_literal {
+private:
+	static void string_must_be_null_terminated() { throw std::invalid_argument("string must be null-terminated"); }
+	template <size_t>
+	struct invalid_string_literal_size { void operator()() const { throw std::invalid_argument("invalid string literal size"); } };
+
+public:
 	using char_type = CharT;
 
-	basic_string_literal() = default;
+	char_type str[N + 1];
 
-	template <size_t N2>
-	requires (N2 >= N)
-	constexpr basic_string_literal(CharT const (&arr)[N2]) noexcept {
-		if (arr[N2 - 1] == 0) {
-			std::copy_n(std::begin(arr), std::min(N2 - 1, N), std::begin(str));
-		} else {
-			std::copy_n(std::begin(arr), std::min(N2, N), std::begin(str));
+	constexpr basic_string_literal() = default;
+	constexpr basic_string_literal(const basic_string_literal&) = default;
+	constexpr basic_string_literal(basic_string_literal&&) = default;
+	constexpr ~basic_string_literal() = default;
+
+	template <std::ranges::range Range>
+	constexpr basic_string_literal(const Range& range)
+	{
+		if constexpr (std::ranges::sized_range<Range>)
+		{
+			size_t max = (std::min)(std::ranges::size(range), N);
+			if constexpr (!std::same_as<CharT, std::remove_cvref_t<std::ranges::range_value_t<Range>>>)
+			{
+				auto [in, out] = std::ranges::copy_n(std::ranges::begin(range | std::views::transform([](auto c) { return static_cast<CharT>(c); })), max, std::ranges::begin(str));
+				std::ranges::fill(out, std::ranges::end(str), CharT{});
+			}
+			else
+			{
+				auto [in, out] = std::ranges::copy_n(std::ranges::begin(range), max, std::ranges::begin(str));
+				std::ranges::fill(out, std::ranges::end(str), CharT{});
+			}
 		}
-		str[N] = 0;
+		else
+		{
+			auto [in, in_end] = std::tuple(std::ranges::begin(range), std::ranges::end(range));
+			auto [out, out_end] = std::tuple(std::ranges::begin(str), std::ranges::end(str));
+			while (in != in_end && out != out_end)
+			{
+				*(out++) = static_cast<CharT>(*(in++));
+			}
+			std::ranges::fill(out, std::ranges::end(str), CharT{});
+		}
 	}
 
-	constexpr basic_string_literal(CharT const* arr) noexcept {
-		std::copy_n(arr, N, std::begin(str));
-		str[N] = 0;
+	template <std::convertible_to<CharT> CharU>
+	constexpr basic_string_literal(const CharU* lit)
+	{
+		for (size_t i = 0; lit[i] != CharU{}; ++i)
+		{
+			str[i] = static_cast<CharT>(lit[i]);
+		}
+		str[N] = {};
 	}
+	
+	constexpr basic_string_literal& operator=(const basic_string_literal&) = default;
+	constexpr basic_string_literal& operator=(basic_string_literal&&) = default;
 
 	constexpr std::add_lvalue_reference_t<CharT const[N + 1]> data() const noexcept {
 		return str;
@@ -49,23 +100,29 @@ struct basic_string_literal {
 		return str[idx];
 	}
 
-	template <size_t N2>
-	friend constexpr basic_string_literal<CharT, N + N2> operator+(basic_string_literal const& lhs, basic_string_literal<CharT, N2> const& rhs) noexcept {
-		basic_string_literal<CharT, N + N2> ret{};
-		std::copy_n(std::begin(lhs.str), N, std::begin(ret.str));
-		std::copy_n(std::begin(rhs.str), N2, std::begin(ret.str) + N);
-		ret.str[N + N2] = 0;
+	template <typename CharU>
+	requires (std::same_as<std::remove_cvref_t<CharU>, std::remove_cvref_t<CharT>>)
+	friend constexpr basic_string_literal<CharT, N + 1> operator+(basic_string_literal const& lhs, CharU c) noexcept {
+		basic_string_literal<CharT, N + 1> ret{};
+		std::ranges::fill(ret.str, CharT{});
+		auto [in, out] = std::ranges::copy_n(std::ranges::begin(lhs.str), N, std::ranges::begin(ret.str));
+		*(out++) = c;
+		*(out) = CharT{};
 		return ret;
 	}
 
 	template <size_t N2>
-	friend constexpr basic_string_literal<CharT, N + N2 - 1> operator+(basic_string_literal const& lhs, CharT const (&rhs)[N2]) noexcept {
-		return lhs + basic_string_literal<CharT, N2 - 1>{rhs};
+	friend constexpr basic_string_literal<CharT, N + N2> operator+(basic_string_literal const& lhs, basic_string_literal<CharT, N2> const& rhs) noexcept {
+		basic_string_literal<CharT, N + N2> ret{};
+		auto result = std::ranges::copy_n(lhs.str, N, std::ranges::begin(ret.str));
+		result = std::ranges::copy_n(rhs.str, N2, result.out);
+		*(result.out) = CharT{};
+		return ret;
 	}
 
 	template <size_t N2>
-	friend constexpr basic_string_literal<CharT, N + N2 - 1> operator+(CharT const (&lhs)[N2], basic_string_literal const& rhs) noexcept {
-		return basic_string_literal<CharT, N2 - 1>{lhs} + rhs;
+	friend constexpr basic_string_literal<CharT, N + N2 - 1> operator+(basic_string_literal const& lhs, const CharT (&rhs)[N2]) noexcept {
+		return lhs + basic_string_literal<CharT, N2 - 1>{rhs};
 	}
 
 	template <size_t N2>
@@ -100,7 +157,12 @@ struct basic_string_literal {
 
 	template <typename T>
 	constexpr friend decltype(auto) operator<<(T&& lhs, basic_string_literal const& rhs) noexcept(noexcept(std::declval<T>() << std::declval<char const (&)[N + 1]>())) {
-		return lhs << rhs.str;
+		return std::forward<T>(lhs) << rhs.str;
+	}
+
+	template <typename T>
+	constexpr friend decltype(auto) operator>>(basic_string_literal const& lhs, T&& rhs) noexcept(noexcept(std::declval<char const (&)[N + 1]>() >> std::declval<T>())) {
+		return lhs.str >> std::forward<T>(lhs);
 	}
 
 	constexpr operator std::string_view() const noexcept {
@@ -130,23 +192,26 @@ struct basic_string_literal {
 	constexpr auto end() noexcept {
 		return std::ranges::end(str);
 	}
-
-	CharT str[N + 1];
 };
 
 template <typename CharT, size_t N>
-basic_string_literal(CharT const (&)[N]) -> basic_string_literal<CharT, N - 1>;
+requires (N != std::dynamic_extent)
+basic_string_literal(std::span<const CharT, N>) -> basic_string_literal<CharT, N - 1>;
+
+template <typename CharT, size_t N>
+requires (N != std::dynamic_extent)
+basic_string_literal(std::span<CharT, N>) -> basic_string_literal<CharT, N - 1>;
+
+template <typename CharT, size_t N>
+basic_string_literal(const CharT (&)[N]) -> basic_string_literal<CharT, N - 1>;
+
+template <typename CharT, size_t N>
+basic_string_literal(std::array<CharT, N>) -> basic_string_literal<CharT, N - 1>;
+
+basic_string_literal() -> basic_string_literal<char, 0>;
 
 template <size_t N>
-struct string_literal : basic_string_literal<char, N> {
-	using basic_string_literal<char, N>::basic_string_literal;
-	using basic_string_literal<char, N>::operator=;
-};
-
-template <size_t N>
-string_literal(char const (&)[N]) -> string_literal<N - 1>;
-
-string_literal() -> string_literal<0>;
+using string_literal = basic_string_literal<char, N>;
 
 template <typename CharT>
 inline constexpr auto make_string_literal = []<size_t N>(CharT const (&arr)[N]) {
@@ -165,7 +230,27 @@ inline constexpr bool is_string_literal<CharT const[N]> = true;
 template <typename CharT, size_t N>
 inline constexpr bool is_string_literal<CharT const (&)[N]> = true;
 
+template <basic_string_literal String>
+struct require_literal
+{
+private:
+	static void incorrect_literal() {}
 
+public:
+	using type = decltype(String);
+	using char_type = typename type::char_type;
+	using string_view = std::basic_string_view<char_type>;
+
+	static constexpr auto literal = String;
+
+	consteval require_literal(const std::convertible_to<string_view> auto& str)
+	{
+		if (static_cast<string_view>(str) != static_cast<string_view>(literal))
+		{
+			incorrect_literal();
+		}
+	}
+};
 
 template <typename CharT, size_t N>
 struct basic_fixed_string {
@@ -298,10 +383,10 @@ struct basic_fixed_string {
 	friend constexpr basic_fixed_string<CharT, N + N2> operator+(basic_fixed_string const& lhs, basic_fixed_string<CharT, N2> const& rhs) noexcept {
 		basic_fixed_string<CharT, N + N2> ret{};
 		auto it = std::begin(ret.str);
-		it = std::copy_n(std::begin(lhs.str), size(), it);
+		it = std::copy_n(std::begin(lhs.str), lhs.size(), it);
 		it = std::copy_n(std::begin(rhs.str), rhs.size(), it);
-		ret.str_size = size() + rhs.size();
-		it = std::fill(it, str.end(), CharT{});
+		ret.str_size = lhs.size() + rhs.size();
+		it = std::fill(it, std::ranges::end(ret.str), CharT{});
 		return ret;
 	}
 
@@ -309,10 +394,10 @@ struct basic_fixed_string {
 	friend constexpr basic_fixed_string<CharT, N + N2> operator+(basic_fixed_string const& lhs, basic_string_literal<CharT, N2> const& rhs) noexcept {
 		basic_fixed_string<CharT, N + N2> ret{};
 		auto it = std::begin(ret.str);
-		it = std::copy_n(std::begin(lhs.str), size(), it);
+		it = std::copy_n(std::begin(lhs.str), lhs.size(), it);
 		it = std::copy_n(std::begin(rhs.str), N2, it);
-		ret.str_size = size() + N2;
-		it = std::fill(it, str.end(), CharT{});
+		ret.str_size = lhs.size() + N2;
+		it = std::fill(it, std::ranges::end(ret.str), CharT{});
 		return ret;
 	}
 
@@ -321,9 +406,9 @@ struct basic_fixed_string {
 		basic_fixed_string<CharT, N + N2> ret{};
 		auto it = std::begin(ret.str);
 		it = std::copy_n(std::begin(lhs.str), N2, it);
-		it = std::copy_n(std::begin(rhs.str), size(), it);
-		ret.str_size = size() + N2;
-		it = std::fill(it, str.end(), CharT{});
+		it = std::copy_n(std::begin(rhs.str), lhs.size(), it);
+		ret.str_size = lhs.size() + N2;
+		it = std::fill(it, std::ranges::end(ret.str), CharT{});
 		return ret;
 	}
 
