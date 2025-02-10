@@ -297,6 +297,19 @@ inline constexpr bool is_nothrow_copyable = std::is_nothrow_copy_constructible_v
 template <typename T>
 inline constexpr bool is_nothrow_moveable = std::is_nothrow_move_constructible_v<T> && std::is_nothrow_move_assignable_v<T>;
 
+struct dummy_t {};
+
+inline constexpr auto dummy = dummy_t{};
+
+template <typename T>
+using complete = std::conditional_t<std::is_void_v<T>, dummy_t, T>;
+
+template <auto V>
+struct constant { inline constexpr static auto value = V; };
+
+template <auto V>
+inline constexpr auto constant_v = constant<V>::value;
+
 /**
  * @brief In release, this returns a "default value". In debug, this calls std::unreachable.
  */
