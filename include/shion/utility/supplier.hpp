@@ -1,10 +1,24 @@
 #ifndef SHION_SUPPLIER_H_
 #define SHION_SUPPLIER_H_
 
+#ifndef SHION_USE_MODULES
+
 #include <concepts>
 #include <functional>
 
+#else
+
+import std;
+
+#endif
+
+#ifndef SHION_BUILDING_MODULES
+
 #include <shion/shion_essentials.hpp>
+
+#endif
+
+#include <shion/decl.hpp>
 
 namespace shion
 {
@@ -37,10 +51,10 @@ public:
 	requires(std::constructible_from<T, Args...>)
 	constexpr supplier_type(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) : _value(std::forward<Args>(args)...) {}
 	
-	constexpr auto get() & noexcept -> decltype(auto) { return _value; }
-	constexpr auto get() && noexcept -> decltype(auto) { return std::move(_value); }
-	constexpr auto get() const& noexcept -> decltype(auto) { return _value; }
-	constexpr auto get() const&& noexcept -> decltype(auto) { return std::move(_value); }
+	constexpr auto get() & noexcept -> T& { return _value; }
+	constexpr auto get() && noexcept -> T&& { return std::move(_value); }
+	constexpr auto get() const& noexcept -> T const& { return _value; }
+	constexpr auto get() const&& noexcept -> T const&& { return std::move(_value); }
 
 	constexpr auto operator()() & -> decltype(auto)
 	{
@@ -112,7 +126,6 @@ class supplier_constant : supplier_base
 public:
 	using supplier_base::supplier_base;
 	using supplier_base::operator=;
-	using supplier_constant<T>::operator();
 	
 	constexpr auto get() const noexcept -> decltype(auto) { return V; }
 	constexpr auto operator()() const -> decltype(auto)
@@ -142,20 +155,20 @@ template <auto V>
 class basic_supplier<constant<V>> : supplier_constant<V>
 {
 public:
-	using supplier_constant<T>::supplier_constant;
-	using supplier_constant<T>::operator=;
-	using supplier_constant<T>::get;
-	using supplier_constant<T>::operator();
+	using supplier_constant<V>::supplier_constant;
+	using supplier_constant<V>::operator=;
+	using supplier_constant<V>::get;
+	using supplier_constant<V>::operator();
 };
 
 }
 
-template <typename T>
+SHION_DECL template <typename T>
 class supplier : detail::basic_supplier<T>
 {
 	using base = detail::basic_supplier<T>;
-	template <typename T>
-	using type = std::remove_cvref_t<decltype(std::declval<T>().get())>;
+	template <typename U>
+	using type = std::remove_cvref_t<decltype(std::declval<U>().get())>;
 
 public:
 	using base::base;
@@ -171,28 +184,28 @@ public:
 	using rvalue_reference_type = std::add_rvalue_reference_t<value_type>;
 	using const_rvalue_reference_type = std::add_rvalue_reference_t<const_value_type>;
 
-	template <typename T, typename... Args>
-	constexpr decltype(auto) operator()(T&& arg1, Args&&... args) & requires (std::invocable<type<supplier&>, T, Args...>)
+	template <typename U, typename... Args>
+	constexpr decltype(auto) operator()(U&& arg1, Args&&... args) & requires (std::invocable<type<supplier&>, U, Args...>)
 	{
-		return std::invoke(get(), std::forward<T>(arg1), std::forward<Args>(args)...);
+		return std::invoke(get(), std::forward<U>(arg1), std::forward<Args>(args)...);
 	}
 
-	template <typename T, typename... Args>
-	constexpr decltype(auto) operator()(T&& arg1, Args&&... args) const& requires (std::invocable<type<supplier const&>, T, Args...>)
+	template <typename U, typename... Args>
+	constexpr decltype(auto) operator()(U&& arg1, Args&&... args) const& requires (std::invocable<type<supplier const&>, U, Args...>)
 	{
-		return std::invoke(get(), std::forward<T>(arg1), std::forward<Args>(args)...);
+		return std::invoke(get(), std::forward<U>(arg1), std::forward<Args>(args)...);
 	}
 
-	template <typename T, typename... Args>
-	constexpr decltype(auto) operator()(T&& arg1, Args&&... args) && requires (std::invocable<type<supplier&&>, T, Args...>)
+	template <typename U, typename... Args>
+	constexpr decltype(auto) operator()(U&& arg1, Args&&... args) && requires (std::invocable<type<supplier&&>, U, Args...>)
 	{
-		return std::invoke(std::move(*this).get(), std::forward<T>(arg1), std::forward<Args>(args)...);
+		return std::invoke(std::move(*this).get(), std::forward<U>(arg1), std::forward<Args>(args)...);
 	}
 
-	template <typename T, typename... Args>
-	constexpr decltype(auto) operator()(T&& arg1, Args&&... args) const&& requires (std::invocable<type<supplier const&&>, T, Args...>)
+	template <typename U, typename... Args>
+	constexpr decltype(auto) operator()(U&& arg1, Args&&... args) const&& requires (std::invocable<type<supplier const&&>, U, Args...>)
 	{
-		return std::invoke(std::move(*this).get(), std::forward<T>(arg1), std::forward<Args>(args)...);
+		return std::invoke(std::move(*this).get(), std::forward<U>(arg1), std::forward<Args>(args)...);
 	}
 };
 

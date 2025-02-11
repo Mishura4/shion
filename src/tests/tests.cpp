@@ -1,11 +1,20 @@
 #include "tests.hpp"
 #include "containers.hpp"
 
+#include <shion/utility/named_parameter.hpp>
+#include <shion/parexp/expr.hpp>
+
 namespace shion::tests {
+	
+constexpr shion::string_literal foo = "foo";
+constexpr shion::string_literal bar = "bar";
+
+constexpr auto foobar = foo + "bar";
+constexpr auto foo_bar = foo + ' ' + "bar";
 
 std::vector<test_suite> init() {
 	std::vector<test_suite> ret;
-
+	
 	auto& containers = ret.emplace_back("Containers");
 	containers.make_test("hive with trivial type", &hive_test_trivial);
 	containers.make_test("hive with non-trivial type", &hive_test_nontrivial);
