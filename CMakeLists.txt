@@ -83,7 +83,6 @@ if (SHION_BUILD_MODULES)
 
 	target_include_directories(shion_modules PUBLIC "${CMAKE_CURRENT_LIST_DIR}/include")
 	target_compile_features(shion_modules PUBLIC cxx_std_23)
-	target_compile_options(shion_modules PUBLIC /utf-8)
 	target_compile_definitions(shion_modules PUBLIC SHION_USE_MODULES PRIVATE SHION_BUILDING_MODULES SHION_BUILDING_LIBRARY)
 	target_sources(shion_modules
 		PUBLIC
@@ -92,6 +91,12 @@ if (SHION_BUILD_MODULES)
 	target_link_libraries(shion PUBLIC shion_modules)
 	if (SHION_LINK_STD_MODULE)
 		target_link_libraries(shion_modules PUBLIC shion_std_module)
+	endif ()
+	if (MSVC)
+		if (NOT CLANG_CL)
+			target_compile_options(shion_modules PUBLIC /wd5244) # #include <meow> in the purview of module shion.meow appears erroneous
+		endif ()
+		target_compile_options(shion_modules PUBLIC /utf-8)
 	endif ()
 	target_compile_definitions(shion PRIVATE SHION_USE_INTERNAL_MODULES)
 else ()
