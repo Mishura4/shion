@@ -43,7 +43,6 @@ jobs:
       fail-fast: false
       matrix:
         arch: [ amd64 ]
-        boost: [ 1.87.0 ]
         os:
           - { name: 'Ubuntu', dist: 'ubuntu', version: 24.04 }
         compiler:
@@ -54,7 +53,6 @@ jobs:
     uses: ./.github/workflows/linux_ci.yml
     with:
       arch: ${{ matrix.arch }}
-      boost: ${{ matrix.boost }}
       os: ${{ matrix.os.dist }}-${{ matrix.os.version }}
       cxx: ${{ matrix.compiler.cxx }}
       cc: ${{ matrix.compiler.cc }}
