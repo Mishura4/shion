@@ -48,9 +48,9 @@ jobs:
         os:
           - { name: 'Ubuntu', dist: 'ubuntu', version: 24.04 }
         compiler:
-          - { name: "g++14", cxx: g++, cc: gcc, version: 14, cmake-flags: '-DCMAKE_BUILD_MODULES=off' }
-          - { name: "llvm14", cxx: clang++, cc: clang, version: 19, cmake-flags: '-DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_EXE_LINKER_FLAGS="-lc++abi" -DCMAKE_BUILD_MODULES=off' }
-          - { name: "llvm14 modules", cxx: clang++, cc: clang, version: 19, cmake-flags: '-DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_EXE_LINKER_FLAGS="-lc++abi" -DCMAKE_BUILD_MODULES=on -DSHION_USE_CMAKE_IMPORT_STD=on' }
+          - { name: "g++14", cxx: g++, cc: gcc, version: 14, cmake-flags: '-DSHION_BUILD_MODULES=off' }
+          - { name: "llvm14", cxx: clang++, cc: clang, version: 19, cmake-flags: '-DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_EXE_LINKER_FLAGS="-lc++abi" -DSHION_BUILD_MODULES=off' }
+          - { name: "llvm14 modules", cxx: clang++, cc: clang, version: 19, cmake-flags: '-DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_EXE_LINKER_FLAGS="-lc++abi" -DSHION_BUILD_MODULES=on -DSHION_USE_CMAKE_IMPORT_STD=on' }
         build: [ Debug ]
     name: '${{ matrix.os.name }} ${{ matrix.os.version }} ${{ matrix.arch }}'
     uses: ./.github/workflows/linux_ci.yml
