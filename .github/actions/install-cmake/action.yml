@@ -50,7 +50,7 @@ runs:
       run: |
         archive='${{ env.CMAKE_TAG }}' &&
         gh release download ${{ env.CMAKE_TAG }} -R ${{ env.CMAKE_REPO }} --archive tar.gz -O "$archive".tar.gz --clobber &&
-        tar xf $archive.tar.gz && mv $archive cmake-src
+        tar xf $archive.tar.gz && mv CMake-* cmake-src 
 
     - name: Build CMake
       if: (steps.restore-cmake.outputs.cache-hit != 'true')
