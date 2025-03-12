@@ -1,6 +1,10 @@
-name: LibShion CI
+name: Shion CI
 on:
   push:
+    branches:
+      - 'dev'
+      - 'main'
+      - 'ci'
     paths:
       - '**Dockerfile'
       - '**.cxx'
@@ -8,9 +12,11 @@ on:
       - '**.h'
       - '**.hpp'
       - '**.cmake'
-      - '**ci.yml'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/linux_ci.yml'
+      - '.github/workflows/windows_ci.yml'
       - '**CMakeLists.txt'
-      - '!**/docpages/**' # Never allow docpages to build CI from doc PRs.
+      - 'dep/**'
   pull_request:
     paths:
       - '**Dockerfile'
@@ -19,139 +25,60 @@ on:
       - '**.h'
       - '**.hpp'
       - '**.cmake'
-      - '**ci.yml'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/linux_ci.yml'
+      - '.github/workflows/windows_ci.yml'
       - '**CMakeLists.txt'
-      - '!**/docpages/**'
-
-permissions:
-  contents: read
+      - 'dep/**'
 
 jobs:
-  linux:
-    permissions:
-      contents: write
+  linux-ci:
+    secrets: inherit
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.cfg.arch }}-(${{ matrix.cfg.package }}-${{ matrix.cfg.version }})
+      group: dev-${{ github.workflow }}-${{ github.ref }}-${{ matrix.os.codename }}-${{ matrix.os.arch }}-(${{ matrix.compiler.cxx }}-${{ matrix.compiler.version }}-${{ matrix.build }})
       cancel-in-progress: true
-    name: Linux ${{matrix.cfg.arch}} (${{matrix.cfg.package}}-${{matrix.cfg.version}})
-    runs-on: ${{matrix.cfg.os}}
     strategy:
-      fail-fast: false # Don't fail everything if one fails. We want to test each OS/Compiler individually
+      fail-fast: false
       matrix:
-        # GitHub hosted runners on Azure
-        # arm7hf is a self-hosted docker-based runner at Brainbox.cc. Raspberry Pi 4, 8gb 4-core with NEON
-        cfg:
-          - { arch: 'amd64', concurrency: 2, os: ubuntu-24.04, package: 'clang++', cc: clang, version: 18, cpack: 'no', ctest: 'no', cmake-args: '-DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_EXE_LINKER_FLAGS="-lc++abi"' }
-          - { arch: 'amd64', concurrency: 2, os: ubuntu-24.04, package: 'g++', cc: gcc, version: 13, cpack: 'no', ctest: 'no', cmake-args: '' }
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
-        with:
-          egress-policy: audit
+        arch: [ amd64 ]
+        boost: [ 1.87.0 ]
+        os:
+          - { name: 'Ubuntu', dist: 'ubuntu', version: 24.04 }
+        compiler:
+          - { cxx: g++, cc: gcc, version: 14, cmake-flags: '' }
+          - { cxx: clang++, cc: clang, version: 19, cmake-flags: '-DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_EXE_LINKER_FLAGS="-lc++abi"' }
+        build: [ Debug ]
+    name: '${{ matrix.os.name }} ${{ matrix.os.version }} ${{ matrix.arch }}'
+    uses: ./.github/workflows/linux_ci.yml
+    with:
+      arch: ${{ matrix.arch }}
+      boost: ${{ matrix.boost }}
+      os: ${{ matrix.os.dist }}-${{ matrix.os.version }}
+      cxx: ${{ matrix.compiler.cxx }}
+      cc: ${{ matrix.compiler.cc }}
+      cxx-ver: ${{ matrix.compiler.version }}
+      cmake-flags: ${{ matrix.compiler.cmake-flags }}
+      build: ${{ matrix.build }}
 
-      - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-
-      - name: Install GCC
-        if: ${{ matrix.cfg.package == 'g++' }}
-        run: |
-          sudo sed -i 's/azure\.//' /etc/apt/sources.list
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa -y
-          sudo apt update
-          sudo apt-get install -y pkg-config ${{ matrix.cfg.package }}-${{ matrix.cfg.version }} ${{ matrix.cfg.cc }}-${{ matrix.cfg.version }} 
-
-      - name: Install LLVM
-        if: ${{ matrix.cfg.package == 'clang++' }}
-        run: |
-          sudo sed -i 's/azure\.//' /etc/apt/sources.list
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-${{ matrix.cfg.version }} main"
-          sudo apt update
-          sudo apt install -y llvm-${{ matrix.cfg.version }} llvm-${{ matrix.cfg.version }}-dev clang-${{ matrix.cfg.version }} libc++-${{ matrix.cfg.version }}-dev libc++abi-${{ matrix.cfg.version }}-dev
-
-      - name: Generate CMake
-        run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release ${{matrix.cfg.cmake-args}} ..
-        env:
-            CXX: ${{ matrix.cfg.package }}-${{ matrix.cfg.version }}
-            CC: ${{ matrix.cfg.cc }}-${{ matrix.cfg.version }}
-
-      - name: Build Project
-        run: cd build && make -j${{ matrix.cfg.concurrency }}
-
-      - name: Run unit tests
-        if: ${{ matrix.cfg.ctest == 'yes' }}
-        run: cd build && ctest -VV
-
-      - name: Package distributable
-        if: ${{ matrix.cfg.cpack == 'yes' }}
-        run: cd build && cpack --verbose
-
-      - name: Upload Binary (DEB)
-        if: ${{ matrix.cfg.cpack == 'yes' }}
-        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
-        with:
-          name: "Shion - Debian Package ${{matrix.cfg.arch}}"
-          path: '${{github.workspace}}/build/*.deb'
-
-      - name: Upload Binary (RPM)
-        if: ${{ matrix.cfg.cpack == 'yes' }}
-        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
-        with:
-          name: "Shion - RPM Package ${{matrix.cfg.arch}}"
-          path: '${{github.workspace}}/build/*.rpm'
-
-  windows: # Windows x64 and x86 build matrix
-    permissions:
-      contents: write
+  windows-ci:
+    secrets: inherit
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os.dist }}-${{ matrix.os.arch }}-(${{ matrix.compiler.version }}-${{ matrix.build }})
+      cancel-in-progress: true
     strategy:
       fail-fast: false # Don't cancel other matrix jobs if one fails
       matrix:
-        cfg:
-        - { name: 'x64',            arch: x64, config: Debug,   vs: '2022', os: 'windows-2022', vsv: '17', upload: true,  options: '' }
-        - { name: 'x64',            arch: x64, config: Release, vs: '2022', os: 'windows-2022', vsv: '17', upload: true,  options: '' }
-        - { name: 'x64-Clang',      arch: x64, config: Debug,   vs: '2022', os: 'windows-2022', vsv: '17', upload: false, options: '-T ClangCL' }
-        - { name: 'x64-Clang',      arch: x64, config: Release,   vs: '2022', os: 'windows-2022', vsv: '17', upload: false, options: '-T ClangCL' }
-
-    name: "Windows ${{matrix.cfg.name}}-${{matrix.cfg.config}}-vs${{matrix.cfg.vs}}"
-    runs-on: ${{matrix.cfg.os}}
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
-        with:
-          egress-policy: audit
-
-      - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-        with:
-          path: main
-
-      - name: Add MSBuild to PATH
-        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2.0.0
-
-      - name: Install chocolatey packages ${{ matrix.cfg.arch }}
-        uses: crazy-max/ghaction-chocolatey@26a07047a2f86d84c769ce506c7632cef332379c # master
-        with:
-            args: install ninja
-
-      - name: Generate CMake (x64)
-        if: ${{ matrix.cfg.arch == 'x64' }}
-        run: mkdir main/build && cd main/build && cmake -G "Visual Studio ${{matrix.cfg.vsv}} ${{matrix.cfg.vs}}" ${{matrix.cfg.options}} ..
-
-      - name: Build Project
-        run: cmake --build main/build --target shion --config ${{matrix.cfg.config}} --parallel 2
-
-      #- name: Move debug files for packaging
-      #  if: ${{ matrix.cfg.config == 'Debug' }}
-      #  run: xcopy main\build\Debug\* main\build\Release\ /s /q
-
-      #- name: Package distributable
-      #  run: cd main/build && cpack --verbose
-      #  env:
-      #    DONT_RUN_VCPKG: true
-
-      #- name: Upload Binary
-      #  if: ${{ matrix.cfg.upload }}
-      #  uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
-      #  with:
-      #    name: "Shion - Windows ${{matrix.cfg.name}}-${{matrix.cfg.config}}-vs${{matrix.cfg.vs}}"
-      #    path: '${{github.workspace}}/main/build/*.zip'
+        arch: [ x64 ]
+        os:
+          - { name: 'Windows', dist: windows, version: 2022 }
+        compiler:
+          - { version: 2022, generator: "Ninja", concurrency: 4 }
+        build: [ Debug ]
+    name: '${{ matrix.os.name }} ${{ matrix.arch }}'
+    uses: ./.github/workflows/windows_ci.yml
+    with:
+      arch: ${{ matrix.arch }}
+      os: ${{ matrix.os.dist }}-${{ matrix.os.version }}
+      compiler: vs${{ matrix.compiler.version }}
+      generator: ${{ matrix.compiler.generator }}
+      build: ${{ matrix.build }}
