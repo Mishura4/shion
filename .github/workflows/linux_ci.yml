@@ -90,7 +90,7 @@ jobs:
       - name: Setup CMake 4.0
         uses: jwlawson/actions-setup-cmake@v2
         with:
-          cmake-version: '4.0.0-rc4'
+          cmake-version: '4.0.x'
 
       - name: Install apt packages
         run: |
