@@ -57,7 +57,7 @@ runs:
       shell: bash
       run: |
         ( mkdir -p "$CMAKE_DIR" ; true )
-        ( cmake cmake-src -B cmake-build && cmake --build cmake-build && --parallel 4 && cmake --install cmake-build --prefix="$CMAKE_DIR" )
+        ( cmake cmake-src -B cmake-build && cmake --build cmake-build --parallel 4 && cmake --install cmake-build --prefix="$CMAKE_DIR" )
 
     - name: Cache CMake
       if: (steps.restore-cmake.outputs.cache-hit != 'true')
