@@ -72,10 +72,11 @@ jobs:
 
       - uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Setup CMake 4.0
-        uses: jwlawson/actions-setup-cmake@v2
+      - name: Install CMake
+        id: install-cmake
+        uses: ./.github/actions/install-cmake
         with:
-          cmake-version: 'v4.0.0-rc4'
+          version: 4.0.0-rc4
 
       - name: Install chocolatey packages ${{ inputs.arch }}
         uses: seanmiddleditch/gha-setup-ninja@v5
