@@ -1,24 +1,16 @@
 #ifndef SHION_SUPPLIER_H_
 #define SHION_SUPPLIER_H_
 
-#ifndef SHION_USE_MODULES
+#include <shion/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
 
 #include <concepts>
 #include <functional>
 
-#else
-
-import std;
-
-#endif
-
-#ifndef SHION_BUILDING_MODULES
-
 #include <shion/shion_essentials.hpp>
 
 #endif
-
-#include <shion/decl.hpp>
 
 namespace shion
 {
@@ -163,7 +155,7 @@ public:
 
 }
 
-SHION_DECL template <typename T>
+SHION_EXPORT template <typename T>
 class supplier : detail::basic_supplier<T>
 {
 	using base = detail::basic_supplier<T>;
@@ -209,7 +201,7 @@ public:
 	}
 };
 
-template <typename T>
+SHION_EXPORT template <typename T>
 supplier(T t) -> supplier<T>;
 
 }

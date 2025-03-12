@@ -1,6 +1,8 @@
 #ifndef shion_COMMON_LOGGER_H_
 #define shion_COMMON_LOGGER_H_
 
+#include <shion/defines.hpp>
+
 #include <variant>
 #include <filesystem>
 #include <fstream>

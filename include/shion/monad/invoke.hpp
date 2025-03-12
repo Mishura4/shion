@@ -1,17 +1,14 @@
 #ifndef SHION_MONAD_INVOKE_H_
 #define SHION_MONAD_INVOKE_H_
 
-#ifdef SHION_USE_MODULES
+#include <shion/defines.hpp>
 
-import std;
-
-#else
+#if !SHION_BUILDING_MODULES
 
 #include <functional>
+#include <utility>
 
 #endif
-
-#include <shion/decl.hpp>
 
 namespace shion
 {
@@ -19,7 +16,7 @@ namespace shion
 namespace monad
 {
 
-SHION_DECL struct invoke_t {
+SHION_EXPORT struct invoke_t {
 	template <typename Fun, typename... Args>
 	constexpr auto operator()(Fun&& fun, Args&&... args) const -> decltype(auto)
 	{
@@ -27,9 +24,9 @@ SHION_DECL struct invoke_t {
 	}
 };
 
-SHION_DECL_INLINE constexpr auto invoke = invoke_t{};
+SHION_EXPORT constexpr auto invoke = invoke_t{};
 
-SHION_DECL template <typename T>
+SHION_EXPORT template <typename T>
 struct cast_t {
 	template <typename U>
 	constexpr auto operator()(U&& u) const -> decltype(auto)
@@ -38,7 +35,7 @@ struct cast_t {
 	}
 };
 
-SHION_DECL template <typename T>
+SHION_EXPORT template <typename T>
 inline constexpr auto cast = cast_t<T>{};
 
 }

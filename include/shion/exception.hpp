@@ -1,5 +1,7 @@
 #pragma once
 
+#include <shion/defines.hpp>
+
 #include <source_location>
 #include <format>
 
@@ -10,13 +12,13 @@ namespace shion {
 /**
  * @brief Base class for all exceptions thrown by the library.
  */
-class exception : public std::exception {
+SHION_EXPORT class exception : public std::exception {
 public:
 	exception() = default;
 	exception(const exception &) = default;
 	exception(exception&&) = default;
-	SHION_API exception(const std::string &msg);
-	SHION_API exception(std::string &&msg) noexcept;
+	SHION_SYMBOL exception(const std::string &msg);
+	SHION_SYMBOL exception(std::string &&msg) noexcept;
 
 	exception& operator=(const exception&) = default;
 	exception& operator=(exception&&) = default;
@@ -29,22 +31,22 @@ public:
 	{
 	}
 
-	SHION_API auto what() const noexcept -> const char* override;
+	SHION_SYMBOL auto what() const noexcept -> const char* override;
 
 private:
 	std::string _message;
 };
 
-class internal_exception : public exception {
+SHION_EXPORT class internal_exception : public exception {
 public:
 	using exception::operator=;
 
-	SHION_API internal_exception(std::source_location loc = std::source_location::current());
-	SHION_API internal_exception(const std::string &msg, std::source_location loc = std::source_location::current());
-	SHION_API internal_exception(std::string &&msg, std::source_location loc = std::source_location::current());
+	SHION_SYMBOL internal_exception(std::source_location loc = std::source_location::current());
+	SHION_SYMBOL internal_exception(const std::string &msg, std::source_location loc = std::source_location::current());
+	SHION_SYMBOL internal_exception(std::string &&msg, std::source_location loc = std::source_location::current());
 
-	SHION_API auto where() const noexcept -> const std::source_location&;
-	SHION_API auto format() const -> std::string;
+	SHION_SYMBOL auto where() const noexcept -> const std::source_location&;
+	SHION_SYMBOL auto format() const -> std::string;
 
 private:
 	std::source_location _where;
@@ -54,7 +56,7 @@ private:
  * @brief Base class for internal exceptions, that is, exceptions that are programmer errors,
  * for example a bad object state for a library operation.
  */
-class logic_exception : public exception {
+SHION_EXPORT class logic_exception : public exception {
 public:
 	using exception::exception;
 	using exception::operator=;
