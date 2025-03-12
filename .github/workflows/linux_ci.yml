@@ -87,12 +87,6 @@ jobs:
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
           sudo apt-add-repository -y "deb http://apt.llvm.org/$osname/ llvm-toolchain-$osname-${{ inputs.cxx-ver }} main"
 
-      - name: Install CMake
-        id: install-cmake
-        uses: ./.github/actions/install-cmake
-        with:
-          version: 4.0.0-rc4
-
       - name: Install apt packages
         run: |
             sudo sed -i 's/azure\.//' /etc/apt/sources.list &&
@@ -109,6 +103,12 @@ jobs:
         with:
           submodules: recursive
           persist-credentials: false
+
+      - name: Install CMake
+        id: install-cmake
+        uses: ./.github/actions/install-cmake
+        with:
+          version: 4.0.0-rc4
 
       - name: Generate CMake
         run: cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=${{ inputs.build }} ${{ inputs.cmake-flags }} -DCMAKE_EXPERIMENTAL_CXX_IMPORT_STD=a9e1cf81-9932-4810-974b-6eccaf14e457 -DSHION_USE_CMAKE_IMPORT_STD=on
