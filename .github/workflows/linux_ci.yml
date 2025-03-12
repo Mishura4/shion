@@ -26,6 +26,9 @@ on:
       pack:
         type: boolean
         default: false
+      name:
+        type: string
+        default: ''
     outputs:
       artifact:
         description: "Compiled binaries"
@@ -63,7 +66,7 @@ on:
 
 jobs:
   ci:
-    name: ${{ inputs.cxx }}-${{ inputs.cxx-ver }} ${{ inputs.build }}
+    name: ${{ inputs.name == '' && format('{0}-{1}', inputs.cxx, inputs.cxx-ver) || inputs.name }} ${{ inputs.build }}
     outputs:
       artifact: ${{ steps.upload.outputs.artifact-id }}
     runs-on: ${{ inputs.os }}
@@ -87,11 +90,6 @@ jobs:
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
           sudo apt-add-repository -y "deb http://apt.llvm.org/$osname/ llvm-toolchain-$osname-${{ inputs.cxx-ver }} main"
 
-      - name: Setup CMake 4.0
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '4.0.0-rc4'
-
       - name: Install apt packages
         run: |
             sudo sed -i 's/azure\.//' /etc/apt/sources.list &&
@@ -109,8 +107,14 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
+      - name: Install CMake
+        id: install-cmake
+        uses: ./.github/actions/install-cmake
+        with:
+          version: 4.0.0-rc4
+
       - name: Generate CMake
-        run: cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=${{ inputs.build }} ${{ inputs.cmake-flags }} -DCMAKE_EXPERIMENTAL_CXX_IMPORT_STD=a9e1cf81-9932-4810-974b-6eccaf14e457 -DSHION_USE_CMAKE_IMPORT_STD=on
+        run: cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=${{ inputs.build }} ${{ inputs.cmake-flags }}
 
       - name: Build Project
         run: cmake --build build --parallel 4

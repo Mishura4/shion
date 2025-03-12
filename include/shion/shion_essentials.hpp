@@ -83,12 +83,12 @@ constexpr To lossless_cast(From v) noexcept {
 	}
 	else {
 		if constexpr (std::is_unsigned_v<From>) {
-			SHION_ASSERT(v <= static_cast<std::make_unsigned_t<To>>(std::numeric_limits<To>::max()));
+			SHION_ASSERT(v <= static_cast<std::make_unsigned_t<To>>(((std::numeric_limits<To>::max))()));
 		} else {
 			if constexpr (std::is_unsigned_v<To>) {
 				SHION_ASSERT(v >= 0);
 			} else {
-				SHION_ASSERT(v >= std::numeric_limits<To>::min());
+				SHION_ASSERT(v >= ((std::numeric_limits<To>::min))());
 			}
 		}
 		return static_cast<To>(v);
@@ -103,70 +103,70 @@ using namespace std::string_view_literals;
 using namespace std::chrono_literals;
 
 consteval int8 operator""_i8(unsigned long long int lit) {
-	if (lit > lossless_cast<unsigned long long int>(std::numeric_limits<int8>::max())) {
+	if (lit > lossless_cast<unsigned long long int>((std::numeric_limits<int8>::max)())) {
 		unreachable();
 	}
 	return static_cast<int8>(lit);
 }
 
 consteval int16 operator""_i16(unsigned long long int lit) {
-	if (lit > lossless_cast<unsigned long long int>(std::numeric_limits<int16>::max())) {
+	if (lit > lossless_cast<unsigned long long int>((std::numeric_limits<int16>::max)())) {
 		unreachable();
 	}
 	return static_cast<int16>(lit);
 }
 
 consteval int32 operator""_i32(unsigned long long int lit) {
-	if (lit > lossless_cast<unsigned long long int>(std::numeric_limits<int32>::max())) {
+	if (lit > lossless_cast<unsigned long long int>((std::numeric_limits<int32>::max)())) {
 		unreachable();
 	}
 	return static_cast<int32>(lit);
 }
 
 consteval int64 operator""_i64(unsigned long long int lit) {
-	if (lit > lossless_cast<unsigned long long int>(std::numeric_limits<int64>::max())) {
+	if (lit > lossless_cast<unsigned long long int>((std::numeric_limits<int64>::max)())) {
 		unreachable();
 	}
 	return static_cast<int64>(lit);
 }
 
 consteval uint8 operator""_u8(unsigned long long int lit) {
-	if (lit > std::numeric_limits<uint8>::max()) {
+	if (lit > (std::numeric_limits<uint8>::max)()) {
 		unreachable();
 	}
 	return static_cast<uint8>(lit);
 }
 
 consteval uint16 operator""_u16(unsigned long long int lit) {
-	if (lit > std::numeric_limits<uint16>::max()) {
+	if (lit > (std::numeric_limits<uint16>::max)()) {
 		unreachable();
 	}
 	return static_cast<uint16>(lit);
 }
 
 consteval uint32 operator""_u32(unsigned long long int lit) {
-	if (lit > std::numeric_limits<uint32>::max()) {
+	if (lit > (std::numeric_limits<uint32>::max)()) {
 		unreachable();
 	}
 	return static_cast<uint32>(lit);
 }
 
 consteval uint64 operator""_u64(unsigned long long int lit) {
-	if (lit > std::numeric_limits<uint64>::max()) {
+	if (lit > (std::numeric_limits<uint64>::max)()) {
 		unreachable();
 	}
 	return static_cast<uint64>(lit);
 }
 
 consteval ssize_t operator""_sst(unsigned long long int lit) {
-	if (lit > lossless_cast<unsigned long long int>(std::numeric_limits<ssize_t>::max())) {
+	if (lit > lossless_cast<unsigned long long int>((std::numeric_limits<ssize_t>::max)())) {
 		unreachable();
 	}
 	return static_cast<ssize_t>(lit);
 }
 
 consteval ssize_t operator""_st(unsigned long long int lit) {
-	if (lit > std::numeric_limits<size_t>::max()) {
+	if (lit > (std::numeric_limits<size_t>::max)()) {
 		unreachable();
 	}
 	return static_cast<size_t>(lit);
@@ -325,20 +325,6 @@ decltype(auto) safe_unreachable(T&& t [[maybe_unused]]) {
 	}
 #endif
 }
-
-#ifdef SHION_SHARED_LIBRARY
-#  ifdef WIN32
-#    ifdef SHION_BUILD
-#      define SHION_API __declspec(dllexport)
-#    else
-#      define SHION_API __declspec(dllimport)
-#    endif
-#  else
-#    define SHION_API
-#  endif
-#else
-#  define SHION_API
-#endif
 
 }
 #endif

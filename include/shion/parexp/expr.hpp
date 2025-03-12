@@ -1,11 +1,9 @@
 #ifndef SHION_LINQ_H_
 #define SHION_LINQ_H_
 
-#ifdef SHION_USE_MODULES
+#include <shion/defines.hpp>
 
-import std;
-
-#else
+#if !SHION_BUILDING_MODULES
 
 #include <functional>
 #include <type_traits>
@@ -14,27 +12,16 @@ import std;
 #include <array>
 #include <functional>
 
-#endif
-
-#ifdef SHION_BUILDING_MODULES
-
-import shion.monad;
-import shion.utility;
-
-#else
-
 #include <shion/utility/supplier.hpp>
 #include <shion/monad/invoke.hpp>
 #include <shion/monad/compare.hpp>
 
 #endif
 
-#include <shion/decl.hpp>
-
 namespace shion
 {
 
-SHION_DECL struct placeholder_t
+SHION_EXPORT struct placeholder_t
 {
 	template <typename T> consteval operator T&() & { throw std::bad_cast{}; }
 	template <typename T> consteval operator const T&() const& { throw std::bad_cast{}; }
@@ -42,14 +29,14 @@ SHION_DECL struct placeholder_t
 	template <typename T> consteval operator const T&&() const&& { throw std::bad_cast{}; }
 };
 
-SHION_DECL_INLINE constexpr auto placeholder = placeholder_t{};
+SHION_EXPORT inline constexpr auto placeholder = placeholder_t{};
 
-SHION_DECL template <size_t>
+SHION_EXPORT template <size_t>
 struct placeholder_n_t : placeholder_t
 {
 };
 
-SHION_DECL template <size_t N>
+SHION_EXPORT template <size_t N>
 inline constexpr auto placeholder_n = placeholder_n_t<N>{};
 
 namespace detail
@@ -286,7 +273,7 @@ public:
 
 }
 
-SHION_DECL template <typename Left, typename... Args>
+SHION_EXPORT template <typename Left, typename... Args>
 class expr : detail::expr_base<Left, Args...>
 {
 	using my_base = detail::expr_base<Left, Args...>;
@@ -311,57 +298,8 @@ public:
 	template <typename R> constexpr auto operator==(R&& r) const& noexcept { return (*this).binary_predicate(monad::equal, std::forward<R>(r)); }
 };
 
-template <typename Left, typename... Args>
+SHION_EXPORT template <typename Left, typename... Args>
 expr(Left&& left, Args&&... args) -> expr<Left, Args...>;
-
-/*
-
-template <typename Left, typename Operand, typename Right>
-template <typename O, typename R>
-constexpr decltype(auto) linq<Left, Operand, Right>::binary_predicate(O&& op, R&& r) &
-{
-	return shion::linq((*this).left(), std::forward<O>(op), std::forward<R>(r));
-}
-
-template <typename Left, typename Operand, typename Right>
-template <typename O, typename R>
-constexpr decltype(auto) linq<Left, Operand, Right>::binary_predicate(O&& op, R&& r) &&
-{
-	return shion::linq(std::move(*this).left(), std::forward<O>(op), std::forward<R>(r));
-}
-
-template <typename Left, typename Operand, typename Right>
-template <typename O, typename R>
-constexpr decltype(auto) linq<Left, Operand, Right>::binary_predicate(O&& op, R&& r) const&
-{
-	return shion::linq((*this).left(), std::forward<O>(op), std::forward<R>(r));
-}
-
-template <typename Left, typename Operand, typename Right>
-template <typename O, typename R>
-constexpr decltype(auto) linq<Left, Operand, Right>::binary_predicate(O&& op, R&& r) const&&
-{
-	return shion::linq(std::move(*this).left(), std::forward<O>(op), std::forward<R>(r));
-}
-
-template <typename Left, typename Operand, typename Right>
-template <typename R>
-constexpr auto linq<Left, Operand, Right>::operator>(R&& r) const & noexcept { return shion::linq((*this).left(), monad::greater, std::forward<R>(r)); }
-
-template <typename Lhs, typename Rhs>
-using call = linq<
-
-struct test_s {
-	int a;
-};
-
-inline constexpr auto linq_test = linq(&test_s::a) == 25;
-inline constexpr auto linq_result = linq_test(test_s{25});
-
-inline constexpr auto test = std::invocable<const monad::greater_t&, int, int>;
-
-
-}*/
 
 }
 

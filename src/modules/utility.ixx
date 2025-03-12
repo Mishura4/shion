@@ -1,10 +1,12 @@
 module;
 
-#include <shion/decl.hpp>
+#include "_build_modules.hpp"
 
 #include <shion/shion_essentials.hpp>
-#include <shion/utility/tuple.hpp>
 
 export module shion.utility;
 
-#include <shion/utility/supplier.hpp>
+import std;
+
+#include "shion/utility/supplier.hpp"
+#include "shion/utility/tuple.hpp"

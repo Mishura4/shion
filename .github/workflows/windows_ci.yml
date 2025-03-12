@@ -72,11 +72,6 @@ jobs:
 
       - uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Setup CMake 4.0
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '4.0.0-rc4'
-
       - name: Install chocolatey packages ${{ inputs.arch }}
         uses: seanmiddleditch/gha-setup-ninja@v5
 
@@ -86,8 +81,14 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
+      - name: Install CMake
+        id: install-cmake
+        uses: ./.github/actions/install-cmake
+        with:
+          version: 4.0.0-rc4
+
       - name: Generate CMake
-        run: cmake . -B build -G "${{ inputs.generator }}" -DCMAKE_BUILD_TYPE=${{ inputs.build }} ${{ inputs.cmake-flags }} -DCMAKE_EXPERIMENTAL_CXX_IMPORT_STD=a9e1cf81-9932-4810-974b-6eccaf14e457 -DSHION_USE_CMAKE_IMPORT_STD=on
+        run: cmake . -B build -G "${{ inputs.generator }}" -DCMAKE_BUILD_TYPE=${{ inputs.build }} ${{ inputs.cmake-flags }}
 
       - name: Build Project
         run: cmake --build build --parallel 4

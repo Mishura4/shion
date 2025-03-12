@@ -1,10 +1,16 @@
 #ifndef SHION_TUPLE_H_
 #define SHION_TUPLE_H_
 
+#include <shion/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
+
 #include <type_traits>
 #include <utility>
 
-#include "../shion_essentials.hpp"
+#include <shion/shion_essentials.hpp>
+
+#endif
 
 namespace shion {
 
@@ -58,7 +64,7 @@ auto get(_tuple_node<N, T>&& tuple) -> std::add_rvalue_reference_t<T> {
 
 }
 
-template <typename... Args>
+SHION_EXPORT template <typename... Args>
 struct tuple : detail::_tuple_impl<std::make_index_sequence<sizeof...(Args)>, Args...> {
 	template <typename... Args_>
 	requires(sizeof...(Args) == sizeof...(Args_))
@@ -97,7 +103,7 @@ struct tuple : detail::_tuple_impl<std::make_index_sequence<sizeof...(Args)>, Ar
 	}
 };
 
-template <typename T, typename U>
+SHION_EXPORT template <typename T, typename U>
 struct tuple<T, U> : detail::_tuple_impl<std::index_sequence<0, 1>, T, U> {
 	template <typename T_, typename U_>
 	constexpr tuple& operator=(const tuple<T_, U_>& other) noexcept(std::is_nothrow_assignable_v<T, T_> && std::is_nothrow_assignable_v<U, U_>) {
@@ -142,38 +148,38 @@ struct tuple<T, U> : detail::_tuple_impl<std::index_sequence<0, 1>, T, U> {
 	}
 };
 
-template <size_t N, typename... Args>
-auto get(tuple<Args...>& tuple) -> decltype(auto) {
+SHION_EXPORT template <size_t N, typename... Args>
+constexpr auto get(tuple<Args...>& tuple) -> decltype(auto) {
 	return detail::get<N>(tuple);
 }
 
-template <size_t N, typename... Args>
-auto get(tuple<Args...> const& tuple) -> decltype(auto) {
+SHION_EXPORT template <size_t N, typename... Args>
+constexpr auto get(tuple<Args...> const& tuple) -> decltype(auto) {
 	return detail::get<N>(tuple);
 }
 
-template <size_t N, typename... Args>
-auto get(tuple<Args...>&& tuple) -> decltype(auto) {
+SHION_EXPORT template <size_t N, typename... Args>
+constexpr auto get(tuple<Args...>&& tuple) -> decltype(auto) {
 	return detail::get<N>(static_cast<decltype(tuple)&&>(tuple));
 }
 
-template <typename T, typename... Args>
-decltype(auto) get(tuple<Args...>& tuple) {
+SHION_EXPORT template <typename T, typename... Args>
+constexpr decltype(auto) get(tuple<Args...>& tuple) {
 	return detail::get<T>(tuple);
 }
 
-template <typename T, typename... Args>
-decltype(auto) get(const tuple<Args...>& tuple) {
+SHION_EXPORT template <typename T, typename... Args>
+constexpr decltype(auto) get(const tuple<Args...>& tuple) {
 	return detail::get<T>(tuple);
 }
 
-template <typename T, typename... Args>
-decltype(auto) get(tuple<Args...>&& tuple) {
+SHION_EXPORT template <typename T, typename... Args>
+constexpr decltype(auto) get(tuple<Args...>&& tuple) {
 	return detail::get<T>(static_cast<decltype(tuple)&&>(tuple));
 }
 
-template <typename... Args>
-tuple<Args&...> tie(Args&... args) noexcept {
+SHION_EXPORT template <typename... Args>
+constexpr tuple<Args&...> tie(Args&... args) noexcept {
 	return {args...};
 }
 

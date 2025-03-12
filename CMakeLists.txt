@@ -1,17 +1,34 @@
 cmake_minimum_required(VERSION 3.16)
 
+if (CMAKE_VERSION VERSION_GREATER_EQUAL 4.0.0)
+	set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "a9e1cf81-9932-4810-974b-6eccaf14e457")
+elseif (CMAKE_VERSION VERSION_GREATER_EQUAL 3.30)
+	set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "0e5b6991-d74f-4b3d-a41c-cf096e0b2508")
+endif ()
+
 project(shion LANGUAGES CXX)
 
 option(SHION_BUILD_TESTS "Whether to build the tests" on)
 option(SHION_BUILD_MODULES "Whether to build the library as a module" on)
 option(SHION_USE_MODULES "Whether to use modules when building the library (forced if SHION_BUILD_MODULES=on)" on)
 set(SHION_STD_MODULE_LOCATION "" CACHE STRING "Specify a custom location for the std module, or build it if empty")
-option(SHION_USE_CMAKE_IMPORT_STD "Whether to use CMake's import std feature" off)
 
 if (SHION_BUILD_MODULES)
 	set(SHION_BUILD_MODULES on)
 	set(CMAKE_CXX_SCAN_FOR_MODULES on)
 endif()
+
+if (LINUX)
+	option(SHION_USE_CMAKE_IMPORT_STD "Whether to use CMake's import std feature" ${SHION_BUILD_MODULES})
+else ()
+	option(SHION_USE_CMAKE_IMPORT_STD "Whether to use CMake's import std feature" off)
+endif ()
+
+if (SHION_USE_CMAKE_IMPORT_STD)
+	cmake_minimum_required(VERSION 3.30 FATAL_ERROR)
+
+	set(CMAKE_CXX_MODULE_STD 1)
+endif ()
 
 if (MSVC AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	set(CLANG_CL true)
@@ -72,11 +89,10 @@ if (SHION_USE_MODULES)
 				set(SHION_STD_MODULE_LOCATION "$<TARGET_FILE:shion_std_module>")
 			endif()
 		else ()
-		if (WIN32)
-			set_target_properties(shion PROPERTIES COMPILE_FLAGS "/reference \"${SHION_STD_MODULE_LOCATION}\"")
+			if (WIN32)
+				set_target_properties(shion PROPERTIES COMPILE_FLAGS "/reference \"${SHION_STD_MODULE_LOCATION}\"")
+			endif ()
 		endif ()
-	else()
-		set(CMAKE_CXX_MODULE_STD 1)
 	endif()
 endif ()
 

@@ -13,6 +13,7 @@ on:
       - '**.h'
       - '**.hpp'
       - '**.cmake'
+      - '.github/actions/install-cmake/action.yml'
       - '.github/workflows/ci.yml'
       - '.github/workflows/linux_ci.yml'
       - '.github/workflows/windows_ci.yml'
@@ -27,6 +28,7 @@ on:
       - '**.h'
       - '**.hpp'
       - '**.cmake'
+      - '.github/actions/install-cmake/action.yml'
       - '.github/workflows/ci.yml'
       - '.github/workflows/linux_ci.yml'
       - '.github/workflows/windows_ci.yml'
@@ -37,7 +39,7 @@ jobs:
   linux-ci:
     secrets: inherit
     concurrency:
-      group: dev-${{ github.workflow }}-${{ github.ref }}-${{ matrix.os.codename }}-${{ matrix.os.arch }}-(${{ matrix.compiler.cxx }}-${{ matrix.compiler.version }}-${{ matrix.build }})
+      group: dev-${{ github.workflow }}-${{ github.ref }}-${{ matrix.compiler.name }}-${{ matrix.os.codename }}-${{ matrix.os.arch }}-(${{ matrix.compiler.cxx }}-${{ matrix.compiler.version }}-${{ matrix.build }})
       cancel-in-progress: true
     strategy:
       fail-fast: false
@@ -46,12 +48,14 @@ jobs:
         os:
           - { name: 'Ubuntu', dist: 'ubuntu', version: 24.04 }
         compiler:
-          - { cxx: g++, cc: gcc, version: 14, cmake-flags: '' }
-          - { cxx: clang++, cc: clang, version: 19, cmake-flags: '-DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_EXE_LINKER_FLAGS="-lc++abi"' }
+          - { name: "g++14", cxx: g++, cc: gcc, version: 14, cmake-flags: '-DSHION_BUILD_MODULES=off' }
+          - { name: "llvm19", cxx: clang++, cc: clang, version: 19, cmake-flags: '-DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_EXE_LINKER_FLAGS="-lc++abi" -DSHION_BUILD_MODULES=off' }
+          - { name: "llvm19 modules", cxx: clang++, cc: clang, version: 19, cmake-flags: '-DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_EXE_LINKER_FLAGS="-lc++abi" -DSHION_BUILD_MODULES=on -DSHION_USE_CMAKE_IMPORT_STD=on' }
         build: [ Debug ]
     name: '${{ matrix.os.name }} ${{ matrix.os.version }} ${{ matrix.arch }}'
     uses: ./.github/workflows/linux_ci.yml
     with:
+      name: ${{ matrix.compiler.name }}
       arch: ${{ matrix.arch }}
       os: ${{ matrix.os.dist }}-${{ matrix.os.version }}
       cxx: ${{ matrix.compiler.cxx }}

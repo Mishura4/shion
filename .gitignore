@@ -31,6 +31,8 @@ out/
 *.exe
 *.out
 *.app
+run/
 
 # IDE
 .vs/
+_*/

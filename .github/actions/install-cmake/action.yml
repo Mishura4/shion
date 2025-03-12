@@ -1,0 +1,75 @@
+name: "Install CMake"
+description: "Build or retrieve CMake & set paths"
+inputs:
+  version:
+    description: "Version of CMake to install"
+    required: false
+  install-dir:
+    description: "Where to install CMake"
+    required: false
+    default: ${{ github.workspace }}/cmake-install
+outputs:
+  cmakedir:
+    description: "Path at which CMake was installed"
+    value: ${{ steps.produce-output.outputs.cmakedir }}
+defaults:
+  run:
+    shell: bash
+runs:
+  using: "composite"
+  steps:
+    - name: Setup variables
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        echo CMAKE_REPO="Kitware/CMake" >> $GITHUB_ENV
+        CMAKE_TAG="${{ inputs.version == '' && '`gh release view -R Kitware/CMake --jq ".name" --json name`' || format('v{0}', inputs.version) }}"
+        echo CMAKE_TAG="$CMAKE_TAG" >> $GITHUB_ENV
+        CMAKE_KEY_RAW="CMake-$CMAKE_TAG-${{ runner.os }}"
+        echo CMAKE_KEY="${CMAKE_KEY_RAW//,/-}" >> $GITHUB_ENV
+        echo CMAKE_DIR="${{ inputs.install-dir }}" >> $GITHUB_ENV
+
+    - name: Restore CMake
+      id: restore-cmake
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ env.CMAKE_DIR }}
+        key: ${{ env.CMAKE_KEY }}
+
+    - name: Add MSBuild to PATH
+      if: runner.os == 'Windows' && (steps.restore-cmake.outputs.cache-hit != 'true')
+      uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
+
+    - name: Download CMake source
+      if: (steps.restore-cmake.outputs.cache-hit != 'true')
+      id: checkout-cmake
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: |
+        archive='${{ env.CMAKE_TAG }}' &&
+        gh release download ${{ env.CMAKE_TAG }} -R ${{ env.CMAKE_REPO }} --archive tar.gz -O "$archive".tar.gz --clobber &&
+        tar xf $archive.tar.gz && mv CMake-* cmake-src 
+
+    - name: Build CMake
+      if: (steps.restore-cmake.outputs.cache-hit != 'true')
+      shell: bash
+      run: |
+        ( mkdir -p "$CMAKE_DIR" ; true )
+        ( cmake cmake-src -B cmake-build -DCMAKE_BUILD_TYPE=Release && cmake --build cmake-build --parallel 4 --config Release && cmake --install cmake-build --prefix="$CMAKE_DIR" )
+
+    - name: Cache CMake
+      if: (steps.restore-cmake.outputs.cache-hit != 'true')
+      id: cache-cmake
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ env.CMAKE_DIR }}
+        key: ${{ steps.restore-cmake.outputs.cache-primary-key }}
+
+    - name: Output
+      id: produce-output
+      shell: bash
+      run: |
+        echo "cmakedir=${{ env.CMAKE_DIR }}" >> $GITHUB_OUTPUT
+        echo "PATH=${{ env.CMAKE_DIR }};${{ env.PATH }} >> $GITHUB_ENV"
