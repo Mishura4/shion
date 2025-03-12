@@ -28,6 +28,7 @@ on:
       - '**.hpp'
       - '**.cmake'
       - '.github/workflows/ci.yml'
+      - '.github/actions/install-cmake.yml'
       - '.github/workflows/linux_ci.yml'
       - '.github/workflows/windows_ci.yml'
       - '**CMakeLists.txt'
