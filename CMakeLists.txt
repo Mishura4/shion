@@ -6,6 +6,7 @@ option(SHION_BUILD_TESTS "Whether to build the tests" on)
 option(SHION_BUILD_MODULES "Whether to build the library as a module" on)
 option(SHION_USE_MODULES "Whether to use modules when building the library (forced if SHION_BUILD_MODULES=on)" on)
 set(SHION_STD_MODULE_LOCATION "" CACHE STRING "Specify a custom location for the std module, or build it if empty")
+option(SHION_USE_CMAKE_IMPORT_STD "Whether to use CMake's import std feature" off)
 
 if (SHION_BUILD_MODULES)
 	set(SHION_BUILD_MODULES on)
@@ -47,32 +48,35 @@ target_compile_features(shion PUBLIC cxx_std_23)
 target_include_directories(shion PUBLIC "${CMAKE_CURRENT_LIST_DIR}/include")
 
 if (SHION_USE_MODULES)
-	if (CLANG_CL AND NOT SHION_FORCE_USE_MODULES)
-		message(FATAL_ERROR "Modules with clang-cl are not supported")
-	endif ()
-	if (SHION_STD_MODULE_LOCATION STREQUAL "")
-		if (WIN32)
-			set(SHION_LINK_STD_MODULE on)
-			set(CMAKE_EXPERIMENTAL_CXX_MODULE_DYNDEP 1)
-			file(COPY
-			  # you don't want to hardcode the path here in a real-world project,
-			  # but you get the idea
-			  "$ENV{VCToolsInstallDir}/modules/std.ixx"
-			  DESTINATION
-			  ${PROJECT_BINARY_DIR}/stdxx
-			)
+	if (NOT SHION_USE_CMAKE_IMPORT_STD)
+		if (CLANG_CL AND NOT SHION_FORCE_USE_MODULES)
+			message(FATAL_ERROR "Modules with clang-cl are not supported")
+		endif ()
+		if (SHION_STD_MODULE_LOCATION STREQUAL "")
+			if (WIN32)
+				set(SHION_LINK_STD_MODULE on)
+				set(CMAKE_EXPERIMENTAL_CXX_MODULE_DYNDEP 1)
+				file(COPY
+				# you don't want to hardcode the path here in a real-world project,
+				# but you get the idea
+				"$ENV{VCToolsInstallDir}/modules/std.ixx"
+				DESTINATION
+				${PROJECT_BINARY_DIR}/stdxx
+				)
 
-			add_library(shion_std_module)
-			target_sources(shion_std_module PUBLIC FILE_SET CXX_MODULES FILES "${PROJECT_BINARY_DIR}/stdxx/std.ixx")
-			target_compile_features(shion_std_module PUBLIC cxx_std_23)
-			target_compile_options(shion_std_module PUBLIC /utf-8)
+				add_library(shion_std_module)
+				target_sources(shion_std_module PUBLIC FILE_SET CXX_MODULES FILES "${PROJECT_BINARY_DIR}/stdxx/std.ixx")
+				target_compile_features(shion_std_module PUBLIC cxx_std_23)
+				target_compile_options(shion_std_module PUBLIC /utf-8)
 
-			set(SHION_STD_MODULE_LOCATION "$<TARGET_FILE:shion_std_module>")
-		endif()
-	else()
+				set(SHION_STD_MODULE_LOCATION "$<TARGET_FILE:shion_std_module>")
+			endif()
+		else ()
 		if (WIN32)
 			set_target_properties(shion PROPERTIES COMPILE_FLAGS "/reference \"${SHION_STD_MODULE_LOCATION}\"")
 		endif ()
+	else()
+		set(CMAKE_CXX_MODULE_STD 1)
 	endif()
 endif ()
 
