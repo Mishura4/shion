@@ -26,8 +26,8 @@ runs:
         echo CMAKE_REPO="Kitware/CMake" >> $GITHUB_ENV
         CMAKE_TAG="${{ inputs.version == '' && '`gh release view -R Kitware/CMake --jq ".name" --json name`' || format('v{0}', inputs.version) }}"
         echo CMAKE_TAG="$CMAKE_TAG" >> $GITHUB_ENV
-        CMAKE_TAG_RAW="CMake-$CMAKE_TAG-${{ runner.os }}"
-        echo CMAKE_TAG="${CMAKE_TAG_RAW//,/-}" >> $GITHUB_ENV
+        CMAKE_KEY_RAW="CMake-$CMAKE_TAG-${{ runner.os }}"
+        echo CMAKE_KEY="${CMAKE_KEY_RAW//,/-}" >> $GITHUB_ENV
         echo CMAKE_DIR="${{ inputs.install-dir }}" >> $GITHUB_ENV
 
     - name: Restore CMake
