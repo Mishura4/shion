@@ -8,6 +8,7 @@ on:
     paths:
       - '**Dockerfile'
       - '**.cxx'
+      - '**.ixx'
       - '**.cpp'
       - '**.h'
       - '**.hpp'
@@ -21,6 +22,7 @@ on:
     paths:
       - '**Dockerfile'
       - '**.cxx'
+      - '**.ixx'
       - '**.cpp'
       - '**.h'
       - '**.hpp'
