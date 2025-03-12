@@ -55,8 +55,6 @@ on:
         type: boolean
         default: false
 
-permissions: read-all
-
 jobs:
   ci:
     name: ${{ inputs.compiler }}-${{ inputs.generator }} ${{ inputs.build }}

@@ -61,8 +61,6 @@ on:
         type: boolean
         default: false
 
-permissions: read-all
-
 jobs:
   ci:
     name: ${{ inputs.cxx }}-${{ inputs.cxx-ver }} ${{ inputs.build }}
