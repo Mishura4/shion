@@ -82,7 +82,7 @@ jobs:
           persist-credentials: false
 
       - name: Generate CMake
-        run: cmake . -B build -G "${{ inputs.generator }}" -DCMAKE_BUILD_TYPE=${{ inputs.build }} ${{ inputs.cmake-flags }}'
+        run: cmake . -B build -G "${{ inputs.generator }}" -DCMAKE_BUILD_TYPE=${{ inputs.build }} ${{ inputs.cmake-flags }}
 
       - name: Build Project
         run: cmake --build build --parallel 4
