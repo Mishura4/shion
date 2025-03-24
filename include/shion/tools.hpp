@@ -13,26 +13,6 @@
 
 namespace shion {
 
-struct empty {};
-
-template <typename T, template<typename ...> class Of>
-inline constexpr bool is_specialization_v = false;
-
-template <typename T, template<typename ...> class Of>
-inline constexpr bool is_specialization_v<const T, Of> = is_specialization_v<T, Of>;
-
-template <template<typename ...> class Of, typename ...Ts>
-inline constexpr bool is_specialization_v<Of<Ts...>, Of> = true;
-
-template <typename T, template<typename ...> class Of>
-using is_specialization_of = std::bool_constant<is_specialization_v<T, Of>>;
-
-template <typename T>
-inline constexpr bool is_optional = false;
-
-template <typename T>
-inline constexpr bool is_optional<std::optional<T>> = true;
-
 template <typename Key, typename Value, typename Hasher = std::hash<Key>, typename Equal = std::equal_to<>>
 class cache;
 

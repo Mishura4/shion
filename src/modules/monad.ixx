@@ -1,6 +1,6 @@
 module;
 
-#include "_build_modules.hpp"
+#include <shion/export.hpp>
 
 export module shion.monad;
 

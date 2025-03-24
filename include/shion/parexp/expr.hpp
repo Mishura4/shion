@@ -1,7 +1,7 @@
 #ifndef SHION_LINQ_H_
 #define SHION_LINQ_H_
 
-#include <shion/defines.hpp>
+#include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
 
@@ -209,7 +209,10 @@ constexpr auto _wrap(const linq_tuple<BoundedArgs...>& bounded, Fun&& fun, linq_
 	if constexpr (From >= sizeof...(BoundedArgs))
 	{
 		auto bind_all_args = [&]<size_t... Is>(std::index_sequence<Is...>) constexpr {
-			return [f = std::forward<Fun>(fun), args_ = std::move(args)]() mutable constexpr { return std::forward<Fun>(f)(std::get<I + Is>(args_)...); };
+			return [f = std::forward<Fun>(fun), args_ = std::move(args)]() mutable constexpr {
+				(void)args_;
+				return std::forward<Fun>(f)(std::get<I + Is>(args_)...);
+			};
 		};
 
 		return bind_all_args(std::make_index_sequence<sizeof...(Args) - I>{});

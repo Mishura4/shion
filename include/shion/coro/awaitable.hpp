@@ -4,7 +4,7 @@
 
 #include "coro.hpp"
 #include "../shion_essentials.hpp"
-#include "../exception.hpp"
+#include <shion/common/exception.hpp>
 
 namespace shion {
 

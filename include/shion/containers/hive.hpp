@@ -5,7 +5,7 @@
 #include <bit>
 #include <list>
 
-#include "../shion_essentials.hpp"
+#include <shion/meta/type_traits.hpp>
 #include "../utility/optional.hpp"
 
 namespace shion {

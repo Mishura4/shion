@@ -1,7 +1,7 @@
 #ifndef SHION_SUPPLIER_H_
 #define SHION_SUPPLIER_H_
 
-#include <shion/defines.hpp>
+#include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
 

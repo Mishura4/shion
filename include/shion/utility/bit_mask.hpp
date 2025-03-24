@@ -1,15 +1,19 @@
 #ifndef SHION_BITMASK_H_
 #define SHION_BITMASK_H_
 
+#include <shion/common/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
 #include <utility>
 #include <type_traits>
+#endif /* SHION_BUILDING_MODULES */
 
 namespace shion {
 
-template <typename T>
+SHION_EXPORT template <typename T>
 struct bit_mask;
 
-template <typename T>
+SHION_EXPORT template <typename T>
 requires (std::is_enum_v<T>)
 struct bit_mask<T> {
 	constexpr bit_mask() = default;
@@ -84,10 +88,10 @@ struct bit_mask<T> {
 	}
 };
 
-template <typename T>
+SHION_EXPORT template <typename T>
 bit_mask(T) -> bit_mask<T>;
 
-template <typename T>
+SHION_EXPORT template <typename T>
 bit_mask<T> bit_if(T flag, bool condition) noexcept {
 	return (condition ? bit_mask<T>{flag} : bit_mask<T>{});
 }

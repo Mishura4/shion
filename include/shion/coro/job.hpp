@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../shion_essentials.hpp"
+#include <shion/common/defines.hpp>
+#include <shion/meta/type_traits.hpp>
 
 namespace shion {
 
@@ -100,7 +101,7 @@ struct promise {
 
 } // namespace detail
 
-static_assert(detail::is_abi_compatible<job, job_dummy>);
+static_assert(is_placeholder_for<job, job_dummy>);
 
 } // namespace shion
 

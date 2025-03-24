@@ -1,6 +1,6 @@
 #include <shion/io/logger.hpp>
 #include <shion/tools.hpp>
-#include <shion/exception.hpp>
+#include <shion/common/exception.hpp>
 
 namespace shion {
 

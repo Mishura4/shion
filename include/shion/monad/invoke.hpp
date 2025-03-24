@@ -1,7 +1,7 @@
 #ifndef SHION_MONAD_INVOKE_H_
 #define SHION_MONAD_INVOKE_H_
 
-#include <shion/defines.hpp>
+#include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
 

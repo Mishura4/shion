@@ -1,7 +1,7 @@
 #ifndef shion_COMMON_LOGGER_H_
 #define shion_COMMON_LOGGER_H_
 
-#include <shion/defines.hpp>
+#include <shion/common/defines.hpp>
 
 #include <variant>
 #include <filesystem>
@@ -11,8 +11,8 @@
 #include <memory>
 #include <utility>
 #include <format>
-
-#include "../utility/bit_mask.h"
+#include <shion/common.hpp>
+#include "../utility/bit_mask.hpp"
 #include "../shion_essentials.hpp"
 
 namespace shion {

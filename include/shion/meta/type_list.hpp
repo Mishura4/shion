@@ -1,23 +1,27 @@
 #ifndef SHION_TYPE_LIST_H_
 #define SHION_TYPE_LIST_H_
 
+#if !SHION_BUILDING_MODULES
+
 #include <utility>
 #include <type_traits>
 
 #include "../shion_essentials.hpp"
 
+#endif
+
 namespace shion {
 
-template <typename T, typename... Args>
+SHION_EXPORT template <typename T, typename... Args>
 inline constexpr bool pack_contains = false || (std::is_same_v<T, Args> || ...);
 
-template <typename... Args>
+SHION_EXPORT template <typename... Args>
 inline constexpr bool is_unique = false;
 
-template <>
+SHION_EXPORT template <>
 inline constexpr bool is_unique<> = true;
 
-template <typename T, typename... Args>
+SHION_EXPORT template <typename T, typename... Args>
 inline constexpr bool is_unique<T, Args...> = !pack_contains<T, Args...> && is_unique<Args...>;
 
 namespace detail {
@@ -46,7 +50,7 @@ struct type_list_impl<std::index_sequence<Ns...>, Args...> : type_list_node<Ns, 
 
 }
 
-template <typename... Args>
+SHION_EXPORT template <typename... Args>
 struct type_list : private detail::type_list_impl<std::make_index_sequence<sizeof...(Args)>, Args...> {
 private:
 	using base = detail::type_list_impl<std::make_index_sequence<sizeof...(Args)>, Args...>;
@@ -61,15 +65,14 @@ public:
 	static constexpr bool is_unique = ::shion::is_unique<Args...>;
 };
 
-template <>
+SHION_EXPORT template <>
 struct type_list<> {};
 
-template <typename T, typename... Args>
+SHION_EXPORT template <typename T, typename... Args>
 requires (is_unique<T, Args...>)
 inline constexpr size_t index_of = type_list<Args...>::template index_of<T>;
 
-
-template <size_t N, typename... Args>
+SHION_EXPORT template <size_t N, typename... Args>
 using pack_type = typename type_list<Args...>::template type<N>;
 
 
