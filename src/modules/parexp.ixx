@@ -2,9 +2,23 @@ module;
 
 #include <shion/export.hpp>
 
+#if !SHION_IMPORT_STD
+
+#include <functional>
+#include <type_traits>
+#include <concepts>
+#include <utility>
+#include <array>
+#include <functional>
+
+#endif
+
 export module shion:parexp;
 
+#if SHION_IMPORT_STD
 import std;
+#endif
+
 import :common;
 import :monad;
 import :utility;

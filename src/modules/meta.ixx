@@ -10,7 +10,9 @@ module;
 
 export module shion:meta;
 
+#if SHION_IMPORT_STD
 import std;
+#endif
 
 #include "shion/meta/type_traits.hpp"
 #include "shion/meta/type_list.hpp"
