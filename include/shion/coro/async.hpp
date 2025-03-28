@@ -1,23 +1,23 @@
 #pragma once
 
+#include <shion/common/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
 #include "coro.hpp"
 #include "awaitable.hpp"
-
-namespace shion {
-
-struct async_dummy : awaitable_dummy {
-	std::shared_ptr<int> dummy_shared_state = nullptr;
-};
-
-}
 
 #include <utility>
 #include <type_traits>
 #include <functional>
 #include <atomic>
 #include <cstddef>
+#endif
 
-namespace shion {
+namespace SHION_NAMESPACE {
+
+SHION_EXPORT struct async_dummy : awaitable_dummy {
+	std::shared_ptr<int> dummy_shared_state = nullptr;
+};
 
 namespace detail {
 
@@ -52,13 +52,11 @@ struct callback<void> {
 
 } // namespace detail
 
-struct confirmation_callback_t;
-
 /**
  * @class async async.h coro/async.h
  * @brief A co_await-able object handling an async call in parallel with the caller.
  */
-template <typename R>
+SHION_EXPORT template <typename R>
 class async : public awaitable<R> {
 
 	detail::async::callback<R> api_callback{};
@@ -100,8 +98,6 @@ public:
 	}
 };
 
-static_assert(detail::is_abi_compatible<async<>, async_dummy>);
+static_assert(is_placeholder_for<async<>, async_dummy>);
 
 } // namespace shion
-
-#endif /* SHION_CORO */

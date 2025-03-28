@@ -1,6 +1,8 @@
+#if !SHION_BUILDING_MODULES
 #include <shion/io/logger.hpp>
-#include <shion/tools.hpp>
+#include <shion/common/tools.hpp>
 #include <shion/common/exception.hpp>
+#endif
 
 namespace shion {
 

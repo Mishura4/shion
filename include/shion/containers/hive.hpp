@@ -1,16 +1,22 @@
 #ifndef SHION_CONTAINERS_HIVE_H_
 #define SHION_CONTAINERS_HIVE_H_
 
+#include <shion/common/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
 #include <type_traits>
 #include <bit>
 #include <list>
 
+#include <shion/common.hpp>
+#include <shion/common/detail.hpp>
 #include <shion/meta/type_traits.hpp>
-#include "../utility/optional.hpp"
+#include <shion/utility/optional.hpp>
+#endif
 
-namespace shion {
+namespace SHION_NAMESPACE {
 
-template <typename T>
+SHION_EXPORT template <typename T>
 class hive;
 
 namespace detail {
@@ -302,7 +308,7 @@ public:
 		if (addr < start || addr >= end)
 			return -1;
 
-		ssize_t hint = (addr - start) / sizeof(storage<T>);
+		ssize_t hint = (addr - start) / sizeof(SHION_NAMESPACE ::detail::storage<T>);
 
 		if (has(hint) && std::addressof(this->data[hint].value) == element) {
 			return hint;
@@ -313,7 +319,7 @@ public:
 
 }
 
-template <typename T>
+SHION_EXPORT template <typename T>
 class hive {
 	using page_iterator = typename std::list<detail::hive_page<T>>::iterator;
 	using page_riterator = typename std::list<detail::hive_page<T>>::reverse_iterator;

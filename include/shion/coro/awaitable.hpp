@@ -1,18 +1,12 @@
 #pragma once
 
+#include <shion/common/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
 #include <iostream>
 
-#include "coro.hpp"
-#include "../shion_essentials.hpp"
-#include <shion/common/exception.hpp>
-
-namespace shion {
-
-struct awaitable_dummy {
-	int *promise_dummy = nullptr;
-};
-
-}
+#include <shion/coro/coro.hpp>
+#include <shion/common.hpp>
 
 #include <mutex>
 #include <utility>
@@ -24,10 +18,18 @@ struct awaitable_dummy {
 #include <optional>
 #include <exception>
 #include <condition_variable>
+#endif
 
-namespace shion {
+namespace SHION_NAMESPACE {
+
+SHION_EXPORT struct awaitable_dummy {
+	int *promise_dummy = nullptr;
+};
 
 namespace detail::promise {
+
+template <typename T>
+using result_t = std::variant<std::monostate, std::conditional_t<std::is_void_v<T>, empty, T>, std::exception_ptr>;
 
 /**
  * @brief State of a promise
@@ -77,8 +79,7 @@ void spawn_sync_wait_job(auto* awaitable, std::condition_variable &cv, auto&& re
 
 } /* namespace detail::promise */
 
-template <typename Derived>
-requires (requires (Derived t) { detail::co_await_resolve(t); })
+SHION_EXPORT template <awaitable_type Derived>
 class basic_awaitable {
 protected:
 	template <bool Timed>
@@ -165,7 +166,7 @@ public:
  * @tparam T Type of the asynchronous value
  * @see promise
  */
-template <typename T>
+SHION_EXPORT template <typename T>
 class awaitable : public basic_awaitable<awaitable<T>> {
 protected:
 	friend class detail::promise::promise_base<T>;
@@ -513,7 +514,7 @@ public:
 
 }
 
-template <typename T>
+SHION_EXPORT template <typename T>
 using basic_promise = detail::promise::promise<T>;
 
 /**
@@ -521,7 +522,7 @@ using basic_promise = detail::promise::promise<T>;
  *
  * Contains the base logic for @ref promise, but does not contain the set_value methods.
  */
-template <typename T>
+SHION_EXPORT template <typename T>
 class moveable_promise {
 	std::unique_ptr<basic_promise<T>> shared_state = std::make_unique<basic_promise<T>>();
 
@@ -574,7 +575,7 @@ public:
 	}
 };
 
-template <>
+SHION_EXPORT template <>
 class moveable_promise<void> {
 	std::unique_ptr<basic_promise<void>> shared_state = std::make_unique<basic_promise<void>>();
 
@@ -610,7 +611,7 @@ public:
 	}
 };
 
-template <typename T>
+SHION_EXPORT template <typename T>
 using promise = moveable_promise<T>;
 
 template <typename T>
@@ -643,7 +644,7 @@ bool awaitable<T>::await_ready() const {
 
 template <typename T>
 template <typename Derived>
-bool awaitable<T>::awaiter<Derived>::await_suspend(detail::std_coroutine::coroutine_handle<> handle) {
+bool awaitable<T>::awaiter<Derived>::await_suspend(std::coroutine_handle<> handle) {
 	auto &promise = *awaitable_obj.state_ptr;
 
 	promise.awaiter = handle;
@@ -670,42 +671,10 @@ T awaitable<T>::awaiter<Derived>::await_resume() {
 	}
 }
 
-
-
 template <typename T>
 template <typename Derived>
 bool awaitable<T>::awaiter<Derived>::await_ready() const {
 	return static_cast<Derived>(awaitable_obj).await_ready();
-}
-
-}
-
-#include "job.hpp"
-
-namespace shion {
-
-namespace detail::promise {
-
-template <typename T>
-using result_t = std::variant<std::monostate, std::conditional_t<std::is_void_v<T>, empty, T>, std::exception_ptr>;
-
-template <typename T>
-void spawn_sync_wait_job(auto* awaitable, std::condition_variable &cv, auto&& result) {
-	[](auto* awaitable_, std::condition_variable &cv_, auto&& result_) -> ::shion::job {
-		try {
-			if constexpr (std::is_void_v<T>) {
-				co_await *awaitable_;
-				result_.template emplace<1>();
-			} else {
-				result_.template emplace<1>(co_await *awaitable_);
-			}
-		} catch (...) {
-			result_.template emplace<2>(std::current_exception());
-		}
-		cv_.notify_all();
-	}(awaitable, cv, std::forward<decltype(result)>(result));
-}
-
 }
 
 }

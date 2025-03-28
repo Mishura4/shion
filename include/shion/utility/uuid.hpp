@@ -1,6 +1,10 @@
 #ifndef SHION_UTILITY_UUID_H_
 #define SHION_UTILITY_UUID_H_
 
+#include <shion/common/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
+
 #include <cstddef>
 #include <cstdint>
 #include <ranges>
@@ -11,14 +15,12 @@
 #include <random>
 #include <chrono>
 #include <thread>
+#include <type_traits>
 
-namespace shion
+#endif
+
+SHION_EXPORT namespace SHION_NAMESPACE
 {
-
-namespace detail
-{
-
-}
 
 inline constexpr char* to_hex(char* buf, const unsigned char* val, size_t n) noexcept
 {
@@ -78,7 +80,7 @@ public:
 
 	template <typename Random = std::mt19937_64>
 	requires (std::invocable<Random> && std::integral<std::invoke_result_t<Random>>)
-	static constexpr uuid generate_v4(Random&& rand) noexcept (std::is_nothrow_invocable<Random>)
+	static constexpr uuid generate_v4(Random&& rand) noexcept (std::is_nothrow_invocable_v<Random>)
 	{
 		using result = std::invoke_result_t<Random>;
 		uuid ret;
@@ -106,7 +108,7 @@ public:
 
 	template <typename Random = std::mt19937_64, typename Duration = std::chrono::milliseconds>
 	requires (std::invocable<Random> && std::integral<std::invoke_result_t<Random>>)
-	static constexpr uuid generate_v7(Random&& rand, std::chrono::time_point<std::chrono::system_clock, Duration> timestamp) noexcept (std::is_nothrow_invocable<Random>)
+	static constexpr uuid generate_v7(Random&& rand, std::chrono::time_point<std::chrono::system_clock, Duration> timestamp) noexcept (std::is_nothrow_invocable_v<Random>)
 	{
 		using result = std::invoke_result_t<Random>;
 		uuid ret;

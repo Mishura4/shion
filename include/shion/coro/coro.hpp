@@ -1,28 +1,13 @@
 #pragma once
 
-#if (defined(_LIBCPP_VERSION) and !defined(__cpp_impl_coroutine)) // if libc++ experimental implementation (LLVM < 14)
-#  define STDCORO_EXPERIMENTAL_HEADER
-#  define STDCORO_EXPERIMENTAL_NAMESPACE
-#endif
+#include <shion/common/defines.hpp>
 
-#ifdef STDCORO_GLIBCXX_COMPAT
-#  define __cpp_impl_coroutine 1
-namespace std {
-	namespace experimental {
-		using namespace std;
-	}
-}
-#endif
-
-#ifdef STDCORO_EXPERIMENTAL_HEADER
-#  include <experimental/coroutine>
-#else
+#if !SHION_BUILDING_MODULES
 #  include <coroutine>
+#  include <shion/common.hpp>
 #endif
 
-#include "../shion_essentials.hpp"
-
-namespace shion {
+namespace SHION_NAMESPACE {
 
 /**
  * @brief Implementation details for internal use only.
@@ -134,21 +119,20 @@ using awaitable_result = decltype(co_await_resolve(std::declval<T>()).await_resu
 
 } // namespace detail
 
-struct confirmation_callback_t;
-
-template <typename R = confirmation_callback_t>
+SHION_EXPORT template <typename R = void>
 class async;
 
-template <typename R = void>
-#ifndef _DOXYGEN_
+SHION_EXPORT template <typename R = void>
 requires (!std::is_reference_v<R>)
-#endif
 class task;
 
-template <typename R = void>
+SHION_EXPORT template <typename R = void>
 class coroutine;
 
-struct job;
+SHION_EXPORT struct job;
+
+SHION_EXPORT template <typename T>
+concept awaitable_type = requires (T t) { detail::co_await_resolve(static_cast<T&&>(t)); };
 
 #ifdef SHION_CORO_TEST
 /**

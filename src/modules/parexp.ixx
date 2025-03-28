@@ -2,16 +2,14 @@ module;
 
 #include <shion/export.hpp>
 
-export module shion.parexp;
+export module shion:parexp;
 
 import std;
-import shion.common;
-import shion.monad;
-import shion.utility;
+import :common;
+import :monad;
+import :utility;
 
 #include "shion/parexp/expr.hpp"
-
-module : private;
 
 using namespace shion;
 

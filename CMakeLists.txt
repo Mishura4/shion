@@ -9,21 +9,18 @@ endif ()
 project(shion LANGUAGES CXX)
 
 option(SHION_BUILD_TESTS "Whether to build the tests" on)
-option(SHION_BUILD_MODULES "Whether to build the library as a module" on)
+option(SHION_BUILD_MODULES "Whether to build the library as a module" off)
 option(SHION_USE_MODULES "Whether to use modules when building the library (forced if SHION_BUILD_MODULES=on)" on)
 set(SHION_STD_MODULE_LOCATION "" CACHE STRING "Specify a custom location for the std module, or build it if empty")
 
 set(CMAKE_CXX_STANDARD 23)
 
-if (SHION_BUILD_MODULES)
-	set(SHION_BUILD_MODULES on)
-	set(CMAKE_CXX_SCAN_FOR_MODULES on)
-endif()
-
 if (LINUX)
 	option(SHION_USE_CMAKE_IMPORT_STD "Whether to use CMake's import std feature" ${SHION_BUILD_MODULES})
+	option(SHION_EXTERN_MODULES "Whether to wrap the module symbols in `extern \"C++\"` for traditional linkage" on)
 else ()
 	option(SHION_USE_CMAKE_IMPORT_STD "Whether to use CMake's import std feature" off)
+	option(SHION_EXTERN_MODULES "Whether to wrap the module symbols in `extern \"C++\"` for traditional linkage" on)
 endif ()
 
 if (SHION_USE_CMAKE_IMPORT_STD)
@@ -37,15 +34,9 @@ if (MSVC AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif()
 
 set(SHION_STATIC_LIBRARY ON CACHE BOOL "Whether to build libshion as a static library")
+set(SHION_MODULE_LIBRARY ON CACHE BOOL "Whether to build libshion as a module library")
+set(SHION_SHARED_LIBRARY ON CACHE BOOL "Whether to build libshion as a module library")
 
-if (SHION_STATIC_LIBRARY)
-	add_library(shion STATIC)
-else ()
-	add_library(shion SHARED)
-	target_compile_definitions(shion PUBLIC SHION_SHARED_LIBRARY)
-endif ()
-
-target_compile_definitions(shion PRIVATE SHION_BUILD)
 set(SHION_PRIVATE_BUILD_OPTIONS "")
 set(SHION_PUBLIC_BUILD_OPTIONS "")
 set(SHION_PRIVATE_BUILD_DEFINITIONS "")
@@ -69,17 +60,26 @@ elseif (UNIX)
 	set(SHION_PRIVATE_BUILD_OPTIONS ${SHION_PRIVATE_BUILD_OPTIONS} -Wall -Wextra -pedantic -pedantic-errors)
 endif ()
 
+if (SHION_BUILD_MODULES)
+	set(SHION_BUILD_MODULES on)
+	set(CMAKE_CXX_SCAN_FOR_MODULES on)
+	if (SHION_EXTERN_MODULES)
+		set(SHION_PUBLIC_BUILD_DEFINITIONS ${SHION_PUBLIC_BUILD_DEFINITIONS} SHION_EXTERN_MODULES)
+	endif ()
+endif()
+
 if (UNIX OR CLANG_CL)
 	set(SHION_PRIVATE_BUILD_OPTIONS ${SHION_PRIVATE_BUILD_OPTIONS} "-Wno-unknown-attributes" "-Wno-c++98-compat")
 endif ()
 
-target_compile_options(shion PRIVATE ${SHION_PRIVATE_BUILD_OPTIONS})
-target_compile_options(shion PUBLIC ${SHION_PUBLIC_BUILD_OPTIONS})
-target_compile_definitions(shion PRIVATE ${SHION_PRIVATE_BUILD_DEFINITIONS})
-target_compile_definitions(shion PUBLIC ${SHION_PUBLIC_BUILD_DEFINITIONS})
+set(SHION_HEADERS_DIR "${CMAKE_CURRENT_LIST_DIR}/include")
+set(SHION_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/src")
 
-target_compile_features(shion PUBLIC cxx_std_23)
-target_include_directories(shion PUBLIC "${CMAKE_CURRENT_LIST_DIR}/include")
+file(GLOB_RECURSE SHION_HEADERS "${SHION_HEADERS_DIR}/shion/*.hpp")
+file(GLOB_RECURSE SHION_SOURCES "${SHION_SOURCE_DIR}/shion/*.hpp" "${SHION_SOURCE_DIR}/shion/*.cpp" "${SHION_HEADERS_DIR}/shion/*.cpp")
+file(GLOB_RECURSE SHION_MODULES "${SHION_SOURCE_DIR}/modules/*.ixx" "${SHION_SOURCE_DIR}/modules/*.cpp")
+file(GLOB_RECURSE SHION_TESTS_SOURCES "${CMAKE_CURRENT_LIST_DIR}/src/tests/*.hpp" "${CMAKE_CURRENT_LIST_DIR}/src/tests/*.cpp")
+file(GLOB_RECURSE SHION_TEST_MODULES "${SHION_SOURCE_DIR}/tests/*.ixx")
 
 if (SHION_USE_MODULES)
 	if (NOT SHION_USE_CMAKE_IMPORT_STD)
@@ -106,49 +106,96 @@ if (SHION_USE_MODULES)
 
 				set(SHION_STD_MODULE_LOCATION "$<TARGET_FILE:shion_std_module>")
 			endif()
-		else ()
-			if (WIN32)
-				set_target_properties(shion PROPERTIES COMPILE_FLAGS "/reference \"${SHION_STD_MODULE_LOCATION}\"")
-			endif ()
 		endif ()
 	endif()
 endif ()
 
+function(create_library lib bin type)
+	add_library(shion-${lib} ${type})
+	set_target_properties(shion-${lib} PROPERTIES OUTPUT_NAME ${bin})
 
-if (SHION_BUILD_MODULES)
-	file(GLOB_RECURSE SHION_MODULES "${CMAKE_CURRENT_LIST_DIR}/src/modules/*.ixx")
-
-	target_compile_definitions(shion PUBLIC SHION_MODULES)
-	target_sources(shion
+	target_compile_options(shion-${lib} PRIVATE ${SHION_PRIVATE_BUILD_OPTIONS})
+	target_compile_options(shion-${lib} PUBLIC ${SHION_PUBLIC_BUILD_OPTIONS})
+	target_compile_definitions(shion-${lib} PRIVATE ${SHION_PRIVATE_BUILD_DEFINITIONS} SHION_BUILD)
+	target_compile_definitions(shion-${lib} PUBLIC ${SHION_PUBLIC_BUILD_DEFINITIONS})
+	target_include_directories(shion-${lib} PUBLIC ${SHION_HEADERS_DIR})
+	
+	target_sources(shion-${lib}
 		PUBLIC
-			FILE_SET CXX_MODULES FILES "${SHION_MODULES}"
+			${SHION_HEADERS}
 	)
-	if (MSVC)
-		if (NOT CLANG_CL)
-			target_compile_options(shion PUBLIC /wd5244) # #include <meow> in the purview of module shion.meow appears erroneous
+	if (NOT SHION_STD_MODULE_LOCATION STREQUAL "")
+		target_compile_options(shion-${lib} PRIVATE "/reference \"${SHION_STD_MODULE_LOCATION}\"")
+	endif ()
+	if (SHION_LINK_STD_MODULE)
+		target_link_libraries(shion-${lib} PUBLIC shion_std_module)
+	endif ()
+	if (SHION_BUILD_MODULES)
+		target_compile_definitions(shion-${lib} PUBLIC SHION_MODULES)
+		target_sources(shion-${lib}
+			PUBLIC
+				FILE_SET CXX_MODULES FILES "${SHION_MODULES}"
+		)
+		if (MSVC)
+			if (NOT CLANG_CL)
+				target_compile_options(shion-${lib} PUBLIC /wd5244) # #include <meow> in the purview of module shion.meow appears erroneous
+			endif ()
 		endif ()
 	endif ()
-else ()
-	set(SHION_MODULES "")
+	
+	add_library(shion::${lib} ALIAS shion-${lib})
+endfunction()
+
+if (SHION_SHARED_LIBRARY)
+	create_library(shared "$<IF:$<CONFIG:Debug>,shiond,shion>" SHARED)
+	
+	target_compile_definitions(shion-shared PUBLIC SHION_SHARED)
+	target_sources(shion-shared
+		PRIVATE
+			${SHION_SOURCES}
+	)
+
+	add_library(shion ALIAS shion-shared)
 endif ()
 
-if (SHION_LINK_STD_MODULE)
-	target_link_libraries(shion PUBLIC shion_std_module)
+if (SHION_STATIC_LIBRARY)
+	create_library(static "$<IF:$<CONFIG:Debug>,libshiond,libshion>" STATIC)
+
+	target_sources(shion-static
+		PRIVATE
+			${SHION_SOURCES}
+	)
+
+	if (NOT SHION_SHARED_LIBRARY)
+		add_library(shion ALIAS shion-static)
+	endif ()
 endif ()
 
-file(GLOB_RECURSE SHION_HEADERS "${CMAKE_CURRENT_LIST_DIR}/include/*.hpp")
-file(GLOB_RECURSE SHION_SOURCES "${CMAKE_CURRENT_LIST_DIR}/src/shion/*.hpp" "${CMAKE_CURRENT_LIST_DIR}/src/shion/*.cpp" "${CMAKE_CURRENT_LIST_DIR}/include/shion/*.cpp")
-file(GLOB_RECURSE SHION_TESTS_SOURCES "${CMAKE_CURRENT_LIST_DIR}/src/tests/*.hpp" "${CMAKE_CURRENT_LIST_DIR}/src/tests/*.cpp")
+if (SHION_MODULE_LIBRARY)
+	create_library(module "$<IF:$<CONFIG:Debug>,modshiond,modshion>" STATIC)
+
+	target_compile_definitions(shion-module PUBLIC SHION_MODULE_LIBRARY)
+	
+	if (NOT SHION_SHARED_LIBRARY AND NOT SHION_STATIC_LIBRARY)
+		add_library(shion ALIAS shion-module)
+	endif ()
+endif()
 
 if (SHION_BUILD_TESTS)
-	add_executable(tests)
-	target_compile_features(tests PUBLIC cxx_std_23)
-	target_link_libraries(tests PUBLIC shion)
-	target_sources(tests PRIVATE ${SHION_TESTS_SOURCES})
-endif ()
+	if (NOT SHION_BUILD_MODULES)
+		message(warning "Tests require modules to be built.")
+	else ()
+		add_executable(tests)
+		target_compile_features(tests PUBLIC cxx_std_23)
+		target_link_libraries(tests PUBLIC shion-shared)
 
-target_sources(shion
-	PUBLIC ${SHION_HEADERS}
-	PRIVATE
-		${SHION_SOURCES}
-)
+		target_compile_options(tests PRIVATE ${SHION_PRIVATE_BUILD_OPTIONS})
+		target_compile_options(tests PUBLIC ${SHION_PUBLIC_BUILD_OPTIONS})
+		target_compile_definitions(tests PRIVATE ${SHION_PRIVATE_BUILD_DEFINITIONS})
+		target_compile_definitions(tests PUBLIC ${SHION_PUBLIC_BUILD_DEFINITIONS})
+		target_include_directories(tests PUBLIC ${SHION_HEADERS_DIR})
+
+		target_sources(tests PRIVATE ${SHION_TESTS_SOURCES})
+		target_sources(tests PRIVATE FILE_SET CXX_MODULES FILES ${SHION_TEST_MODULES})
+	endif ()
+endif ()

@@ -1,9 +1,12 @@
 #ifndef SHION_COLOR_H_
 #define SHION_COLOR_H_
 
-#include <type_traits>
+#include <shion/common/defines.hpp>
 
-#include "../shion_essentials.hpp"
+#if !SHION_BUILDING_MODULES
+#include <type_traits>
+#include <shion/common.hpp>
+#endif
 
 namespace shion {
 

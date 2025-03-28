@@ -3,6 +3,7 @@
 
 #include <shion/common/defines.hpp>
 
+#if !SHION_BUILDING_MODULES
 #include <variant>
 #include <filesystem>
 #include <fstream>
@@ -12,10 +13,10 @@
 #include <utility>
 #include <format>
 #include <shion/common.hpp>
-#include "../utility/bit_mask.hpp"
-#include "../shion_essentials.hpp"
+#include <shion/utility/bit_mask.hpp>
+#endif
 
-namespace shion {
+SHION_EXPORT namespace SHION_NAMESPACE {
 
 enum class log_type : uint64 {
 	none    = 0,
@@ -27,12 +28,12 @@ enum class log_type : uint64 {
 	all     = ~0_u64
 };
 
-using log_mask = shion::bit_mask<log_type>;
+using log_mask = SHION_NAMESPACE ::bit_mask<log_type>;
+
+inline constexpr log_mask default_enabled_logs = log_mask{log_type::info, log_type::debug, log_type::warning};
 
 class SHION_API logger {
 public:
-	static constexpr auto default_enabled_logs = log_mask{log_type::info, log_type::debug, log_type::warning};
-
 	using time = std::chrono::time_point<std::chrono::system_clock>;
 
 	constexpr logger() = default;

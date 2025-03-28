@@ -1,7 +1,22 @@
-#include "../containers.hpp"
+module;
 
-#include <shion/containers/hive.hpp>
+#include <vector>
+#include <string_view>
+#include <string>
+#include <concepts>
+#include <utility>
+#include <functional>
+#include <source_location>
+#include <optional>
+#include <chrono>
 
+#include "../tests.hpp"
+
+module shion.tests;
+
+#if SHION_MODULES
+import shion;
+#endif
 namespace shion::tests {
 
 struct non_trivial {
@@ -66,7 +81,7 @@ void hive_test(test& self) {
 	for (i = 0; i < 69; ++i) {
 		it = h.emplace(i);
 	}
-	for (auto it = h.begin(); it != h.end();) {
+	for (it = h.begin(); it != h.end();) {
 		it = it.erase();
 	}
 	TEST_ASSERT(self, h.begin() == h.end() && h.size() == 0);
@@ -74,18 +89,18 @@ void hive_test(test& self) {
 	for (i = 0; i < 420; ++i) {
 		it = h.emplace(i);
 	}
-	for (auto it = h.begin(); it != h.end();) {
+	for (it = h.begin(); it != h.end();) {
 		it = it.erase();
 	}
 	TEST_ASSERT(self, h.begin() == h.end() && h.size() == 0);
 
 	for (i = 0; i < 420; ++i) {
-		auto it = h.emplace(i);
+		it = h.emplace(i);
 	}
 	typename hive::iterator at_63;
 	typename hive::iterator at_128;
 	i = 0;
-	for (auto it = h.begin(); it != h.end();) {
+	for (it = h.begin(); it != h.end();) {
 		if (i == 63) {
 			at_63 = it;
 			++it;

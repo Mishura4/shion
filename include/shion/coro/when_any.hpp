@@ -1,15 +1,19 @@
 #pragma once
 
-#include "coro.hpp"
-#include "job.hpp"
+#include <shion/common/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
+#include <shion/coro/coro.hpp>
+#include <shion/coro/job.hpp>
 
 #include <atomic>
 #include <array>
 #include <memory>
 #include <limits>
 #include <optional>
+#endif
 
-namespace shion {
+namespace SHION_NAMESPACE {
 
 template <typename T>
 class event_router_t;
@@ -122,10 +126,8 @@ concept void_result = std::same_as<T, empty>;
  * @see when_any::result
  * @tparam Args... Type of each awaitable to await on
  */
-template <typename... Args>
-#ifndef _DOXYGEN_
+SHION_EXPORT template <typename... Args>
 requires (sizeof...(Args) >= 1)
-#endif
 class when_any {
 	/**
 	 * @brief Alias for the type of the result variant
@@ -499,10 +501,8 @@ public:
 	}
 };
 
-template <typename... Args>
-#ifndef _DOXYGEN_
+SHION_EXPORT template <typename... Args>
 requires (sizeof...(Args) >= 1)
-#endif /* _DOXYGEN_ */
 when_any(Args...) -> when_any<detail::when_any::awaitable_type<Args>...>;
 
 } /* namespace shion */

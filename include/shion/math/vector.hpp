@@ -1,15 +1,17 @@
 #ifndef SHION_VECTOR_H_
 #define SHION_VECTOR_H_
 
-#include <exception>
+#include <shion/common/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
+#include <stdexcept>
 #include <new>
 #include <utility>
 #include <type_traits>
 #include <cmath>
+#endif
 
-#include "../shion_essentials.hpp"
-
-namespace shion {
+namespace SHION_NAMESPACE {
 
 inline namespace geometry {
 
@@ -64,7 +66,7 @@ inline namespace geometry {
 /**
  * @brief Mathematical 2D vector, i.e. the difference between 2 points.
  */
-template <typename T>
+SHION_EXPORT template <typename T>
 struct vector2 {
 	SHION_DEFINE_TUPLE_ACCESS(2);
 
@@ -110,7 +112,7 @@ struct vector2 {
 /**
  * @brief Mathematical 3D vector, i.e. the difference between 2 points.
  */
-template <typename T>
+SHION_EXPORT template <typename T>
 struct vector3 {
 	SHION_DEFINE_TUPLE_ACCESS(3);
 
@@ -163,7 +165,7 @@ struct vector3 {
 /**
  * @brief Mathematical 3D vector, i.e. the difference between 2 points, with a rotation.
  */
-template <typename T>
+SHION_EXPORT template <typename T>
 struct quaternion : vector3<T> {
 	/**
 	 * @brief Rotation. TODO write this because i have no idea
@@ -174,7 +176,7 @@ struct quaternion : vector3<T> {
 /**
  * @brief Dimensions in 2D space.
  */
-template <typename T>
+SHION_EXPORT template <typename T>
 struct dimensions2 {
 	/**
 	 * @brief Width, i.e. right x - left x.
@@ -202,7 +204,7 @@ struct dimensions2 {
 /**
  * @brief Dimensions in 3D space.
  */
-template <typename T>
+SHION_EXPORT template <typename T>
 struct dimensions3 {
 	/**
 	 * @brief Width, i.e. right x - left x.
@@ -223,7 +225,7 @@ struct dimensions3 {
 /**
  * @brief Point in 2D space. (0, 0) is top left.
  */
-template <typename T>
+SHION_EXPORT template <typename T>
 struct point2 {
 	SHION_DEFINE_TUPLE_ACCESS(2);
 
@@ -350,7 +352,7 @@ struct point2 {
 	T y = {};
 };
 
-template <typename T>
+SHION_EXPORT template <typename T>
 struct point3 {
 	SHION_DEFINE_TUPLE_ACCESS(3);
 
@@ -495,7 +497,7 @@ struct point3 {
 	T z = {};
 };
 
-template <typename T>
+SHION_EXPORT template <typename T>
 struct rect {
 	/**
 	 * @brief Top left point.
@@ -530,7 +532,7 @@ struct rect {
 	}
 };
 
-template <typename T>
+SHION_EXPORT template <typename T>
 struct box {
 	/**
 	 * @brief Top left front point.
@@ -555,6 +557,8 @@ struct box {
 };
 
 #undef SHION_DEFINE_TUPLE_ACCESS
+
+SHION_EXPORT_START
 
 using vector2s = vector2<short>;
 using vector2i = vector2<int>;
@@ -595,6 +599,8 @@ using vector3u64 = vector3<uint64>;
 
 using vector3f = vector3<float>;
 using vector3d = vector3<double>;
+
+SHION_EXPORT_END
 
 }
 

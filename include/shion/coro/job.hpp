@@ -1,21 +1,20 @@
 #pragma once
 
 #include <shion/common/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
 #include <shion/meta/type_traits.hpp>
-
-namespace shion {
-
-struct job_dummy {
-};
-
-}
-
-#include "coro.hpp"
 
 #include <type_traits>
 #include <utility>
 
-namespace shion {
+#include "coro.hpp"
+#endif
+
+namespace SHION_NAMESPACE {
+
+SHION_EXPORT struct job_dummy {
+};
 
 /**
  * @class job job.h coro/job.h
@@ -29,7 +28,7 @@ namespace shion {
  * If you must pass a reference, pass it as a pointer or with std::ref, but you must fully understand the reason behind this warning, and what to avoid.
  * If you prefer a safer type, use `coroutine` for synchronous execution, or `task` for parallel tasks, and co_await them.
  */
-struct job {};
+SHION_EXPORT struct job {};
 
 namespace detail {
 
@@ -99,6 +98,27 @@ struct promise {
 
 } // namespace job
 
+namespace promise {
+
+template <typename T>
+void spawn_sync_wait_job(auto* awaitable, std::condition_variable &cv, auto&& result) {
+	[](auto* awaitable_, std::condition_variable &cv_, auto&& result_) -> ::shion::job {
+		try {
+			if constexpr (std::is_void_v<T>) {
+				co_await *awaitable_;
+				result_.template emplace<1>();
+			} else {
+				result_.template emplace<1>(co_await *awaitable_);
+			}
+		} catch (...) {
+			result_.template emplace<2>(std::current_exception());
+		}
+		cv_.notify_all();
+	}(awaitable, cv, std::forward<decltype(result)>(result));
+}
+
+}
+
 } // namespace detail
 
 static_assert(is_placeholder_for<job, job_dummy>);
@@ -108,8 +128,8 @@ static_assert(is_placeholder_for<job, job_dummy>);
 /**
  * @brief Specialization of std::coroutine_traits, helps the standard library figure out a promise type from a coroutine function.
  */
-template<typename... Args>
-struct shion::detail::std_coroutine::coroutine_traits<shion::job, Args...> {
+SHION_EXPORT template<typename... Args>
+struct std::coroutine_traits<shion::job, Args...> {
 	/**
 	 * @brief Promise type for this coroutine signature.
 	 *

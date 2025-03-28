@@ -5,9 +5,10 @@ module;
 #if !SHION_IMPORT_STD
 #  include <concepts>
 #  include <type_traits>
+#  include <chrono>
 #endif
 
-export module shion.meta;
+export module shion:meta;
 
 import std;
 

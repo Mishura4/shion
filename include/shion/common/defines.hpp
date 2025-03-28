@@ -21,14 +21,22 @@
 #  define SHION_MODULES 0
 #endif /* SHION_MODULES */
 
+#ifndef SHION_SHARED
+#  define SHION_SHARED 0
+#endif
+
+#ifndef SHION_MODULE_LIBRARY
+#  define SHION_MODULE_LIBRARY 0
+#endif
 
 // ------------- Internals -------------
 #if SHION_SHARED
 #  if _WIN32
-#    if SHION_BUILDING_LIBRARY
+#    if SHION_BUILD
 #      define SHION_API __declspec(dllexport)
 #    else
 #      define SHION_API __declspec(dllimport)
+#      define SHION_EXPORT_API SHION_API
 #    endif /* SHION_BUILDING_LIBRARY */
 #  endif /* _WIN32 */
 #endif /* SHION_SHARED */
@@ -37,11 +45,15 @@
 #  ifndef SHION_IMPORT_STD
 #    define SHION_IMPORT_STD 0
 #  endif
-#endif /* SHION_BUILDING_LIBRARY */ 
+#endif /* SHION_BUILDING_LIBRARY */
 
 #ifndef SHION_API
 #  define SHION_API
 #endif /* SHION_API */
+
+#ifndef SHION_EXPORT_API
+#define SHION_EXPORT_API inline
+#endif
 
 #ifndef SHION_EXPORT
 #  define SHION_EXPORT

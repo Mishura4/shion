@@ -1,17 +1,11 @@
 #pragma once
 
-#include "../shion_essentials.hpp"
-#include "awaitable.hpp"
+#include <shion/common/defines.hpp>
 
-namespace shion {
-
-struct task_dummy : awaitable_dummy {
-	int* handle_dummy = nullptr;
-};
-
-}
-
-#include "coro.hpp"
+#if !SHION_BUILDING_MODULES
+#include <shion/common/common.hpp>
+#include <shion/coro/coro.hpp>
+#include <shion/coro/awaitable.hpp>
 
 #include <utility>
 #include <type_traits>
@@ -22,8 +16,13 @@ struct task_dummy : awaitable_dummy {
 #include <atomic>
 
 #include <iostream> // std::cerr in final_suspend
+#endif
 
-namespace shion {
+namespace SHION_NAMESPACE {
+
+SHION_EXPORT struct task_dummy : awaitable_dummy {
+	int* handle_dummy = nullptr;
+};
 
 namespace detail {
 
@@ -61,15 +60,9 @@ using handle_t = std_coroutine::coroutine_handle<promise_t<R>>;
 /**
  * @class task task.h coro/task.h
  * @brief A coroutine task. It starts immediately on construction and can be co_await-ed, making it perfect for parallel coroutines returning a value.
- *
- * @warning - This feature is EXPERIMENTAL. The API may change at any time and there may be bugs.
- * Please report any to <a href="https://github.com/brainboxdotcc/SHION/issues">GitHub Issues</a> or to our <a href="https://discord.gg/shion">Discord Server</a>.
- * @tparam R Return type of the task. Cannot be a reference but can be void.
  */
-template <typename R>
-#ifndef _DOXYGEN_
+SHION_EXPORT template <typename R>
 requires (!std::is_reference_v<R>)
-#endif
 class task : public awaitable<R> {
 	friend struct detail::task::promise_t<R>;
 
@@ -262,7 +255,7 @@ struct promise_base : basic_promise<R> {
 		 */
 		decltype(auto) await_resume() {
 			if (promise.cancelled.load()) {
-				throw shion::task_cancelled_exception{"task was cancelled"};
+				throw shion::task_cancelled_exception{};
 			}
 			return awaitable.await_resume();
 		}
@@ -399,15 +392,15 @@ std_coroutine::coroutine_handle<> final_awaiter<R>::await_suspend(handle_t<R> ha
 
 } // namespace detail::task
 
-static_assert(detail::is_abi_compatible<task<void>, task_dummy>);
-static_assert(detail::is_abi_compatible<task<int>, task_dummy>);
+static_assert(is_placeholder_for<task<void>, task_dummy>);
+static_assert(is_placeholder_for<task<int>, task_dummy>);
 
 } // namespace shion
 
 /**
  * @brief Specialization of std::coroutine_traits, helps the standard library figure out a promise_t type from a coroutine function.
  */
-template<typename T, typename... Args>
-struct shion::detail::std_coroutine::coroutine_traits<shion::task<T>, Args...> {
+SHION_EXPORT template<typename T, typename... Args>
+struct std::coroutine_traits<shion::task<T>, Args...> {
 	using promise_type = shion::detail::task::promise_t<T>;
 };

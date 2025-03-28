@@ -1,16 +1,19 @@
 #ifndef SHION_UNIQUE_HANDLE_H_
 #define SHION_UNIQUE_HANDLE_H_
 
+#include <shion/common/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
 #include <utility>
 #include <optional>
 #include <type_traits>
 #include <functional>
 
-#include "../shion_essentials.hpp"
+#include <shion/common.hpp>
+#include <shion/utility/optional.hpp>
+#endif
 
-#include "optional.hpp"
-
-namespace shion {
+SHION_EXPORT namespace SHION_NAMESPACE {
 
 inline namespace utility {
 
@@ -194,7 +197,6 @@ template <typename T>
 using unique_value = unique_handle<T, std::nullopt>;
 
 using unique_flag = unique_value<bool>;
-
 
 template <typename T, std::equality_comparable_with<T> U, auto R1, auto R2>
 requires (!std::is_pointer_v<T> && !std::is_pointer_v<U>)

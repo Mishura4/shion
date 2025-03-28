@@ -1,5 +1,6 @@
 #pragma once
 
+#include "coro/coro.hpp"
 #include "coro/awaitable.hpp"
 #include "coro/async.hpp"
 #include "coro/coroutine.hpp"

@@ -7,5 +7,6 @@
 #include <shion/common/assert.hpp>
 #include <shion/common/literals.hpp>
 #include <shion/common/exception.hpp>
+#include <shion/common/tools.hpp>
 
 #endif /* SHION_COMMON_H_ */

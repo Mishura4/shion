@@ -1,15 +1,18 @@
 #ifndef SHION_STRING_LITERAL_H_
 #define SHION_STRING_LITERAL_H_
 
+#include <shion/common/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
 #include <algorithm>
 #include <utility>
 #include <span>
 #include <ranges>
 #include <string_view>
+#include <stdexcept>
+#endif
 
-#include "../shion_essentials.hpp"
-
-namespace shion
+SHION_EXPORT namespace SHION_NAMESPACE
 {
 
 template <typename CharT, size_t N>
@@ -17,13 +20,13 @@ struct basic_string_literal;
 
 }
 
-template <typename CharT, size_t N>
-struct std::tuple_size<shion::basic_string_literal<CharT, N>>
+SHION_EXPORT template <typename CharT, size_t N>
+struct std::tuple_size<SHION_NAMESPACE ::basic_string_literal<CharT, N>>
 {
 	static constexpr size_t value = N + 1;
 };
 
-namespace shion {
+SHION_EXPORT namespace SHION_NAMESPACE {
 
 template <typename CharT, size_t N>
 struct basic_string_literal {
@@ -47,7 +50,7 @@ public:
 	{
 		if constexpr (std::ranges::sized_range<Range>)
 		{
-			size_t max = (std::min)(std::ranges::size(range), N);
+			size_t max = ((std::min))(std::ranges::size(range), N);
 			if constexpr (!std::same_as<CharT, std::remove_cvref_t<std::ranges::range_value_t<Range>>>)
 			{
 				auto [in, out] = std::ranges::copy_n(std::ranges::begin(range | std::views::transform([](auto c) { return static_cast<CharT>(c); })), max, std::ranges::begin(str));
@@ -275,7 +278,7 @@ struct basic_fixed_string {
 				std::ranges::fill_n(end, N - N_, 0);
 			}
 		} else if constexpr (N_ > N) {
-			str_size = std::min(other_size, N);
+			str_size = (std::min)(other_size, N);
 			auto [_, end] = std::ranges::copy_n(other, str_size, str.data());
 			if (str_size < N) {
 				std::ranges::fill_n(end, N - str_size, 0);
@@ -285,21 +288,21 @@ struct basic_fixed_string {
 
 	template <size_t N_>
 	explicit(N_ > N) constexpr basic_fixed_string(const basic_fixed_string<CharT, N_> &other) noexcept :
-		str_size{std::min(N, other.str_size())} {
+		str_size{(std::min)(N, other.str_size())} {
 		if constexpr (N_ <= N) {
 			auto [_, end] = std::ranges::copy_n(other.str, N_, str);
 			if constexpr (N != N_) {
 				std::ranges::fill_n(end, N - N_, 0);
 			}
 		} else if constexpr (N_ > N) {
-			str_size = std::min(other.size(), N);
+			str_size = (std::min)(other.size(), N);
 			auto [_, end] = std::ranges::copy_n(other.str, str_size, str);
 			std::ranges::fill(end, std::ranges::end(str), 0);
 		}
 	};
 
 	constexpr basic_fixed_string(std::string_view other) noexcept :
-		str_size{std::min(N, other.size())} {
+		str_size{(std::min)(N, other.size())} {
 		auto [_, end] = std::ranges::copy_n(other.data(), str_size, str.data());
 		std::ranges::fill_n(end, N - str_size, 0);
 	}
@@ -330,7 +333,7 @@ struct basic_fixed_string {
 
 	constexpr basic_fixed_string& operator=(std::string_view other) noexcept {
 		str_size = other.size();
-		auto [_, end] = std::ranges::copy_n(other, std::min(N, other.size()), str);
+		auto [_, end] = std::ranges::copy_n(other, (std::min)(N, other.size()), str);
 		std::ranges::fill(end, std::ranges::end(str), 0);
 		return *this;
 	}

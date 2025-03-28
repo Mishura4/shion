@@ -1,7 +1,16 @@
-#include "tests.hpp"
-#include "containers.hpp"
+module;
 
-namespace shion::tests {
+#include <filesystem>
+#include <source_location>
+
+#include "tests.hpp"
+
+module shion.tests;
+
+import shion;
+
+namespace shion::tests
+{
 
 std::vector<test_suite> init() {
 	std::vector<test_suite> ret;

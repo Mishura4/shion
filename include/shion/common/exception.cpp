@@ -55,4 +55,8 @@ std::string internal_exception::format() const {
 	));
 }
 
+task_cancelled_exception::task_cancelled_exception() : exception("A task was cancelled.") {
+}
+
+
 }

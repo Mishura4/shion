@@ -67,6 +67,17 @@ public:
 };
 
 /**
+ * @brief A task was cancelled
+ */
+SHION_EXPORT class task_cancelled_exception : public exception {
+public:
+	using exception::exception;
+	using exception::operator=;
+	
+	SHION_API task_cancelled_exception();
+};
+
+/**
  * @brief In release, this returns a "default value". In debug, this calls std::unreachable.
  */
 inline wildcard safe_unreachable(wildcard) {

@@ -1,13 +1,15 @@
 #ifndef SHION_RAII_PTR_H_
 #define SHION_RAII_PTR_H_
 
+#include <shion/common/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
 #include <utility>
+#endif
 
-#include "../shion_essentials.hpp"
+namespace SHION_NAMESPACE {
 
-namespace shion {
-
-template <typename Self, typename Ptr>
+SHION_EXPORT template <typename Self, typename Ptr>
 class raii_ptr {
 public:
 	constexpr raii_ptr() = default;

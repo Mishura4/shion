@@ -1,20 +1,23 @@
 #ifndef SHION_UTILITY_OPTIONAL_H_
 #define SHION_UTILITY_OPTIONAL_H_
 
+#include <shion/common/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
 #include <optional> // std::nullopt_t, std::bad_optional_access
 #include <type_traits>
 #include <concepts>
 #include <utility>
 #include <memory>
 
-#include "../shion_essentials.hpp"
-#include "../tools.hpp"
+#include <shion/common/types.hpp>
+#include <shion/common/detail.hpp>
+#include <shion/meta/type_traits.hpp>
+#endif
 
-namespace shion {
+namespace SHION_NAMESPACE {
 
-inline namespace utility {
-
-
+SHION_EXPORT inline namespace utility {
 
 /**
  * @brief std::optional, but can hold references

@@ -4,6 +4,12 @@ module;
 
 export module shion;
 
-export import shion.monad;
-export import shion.parexp;
-export import shion.meta;
+export import :common;
+export import :utility;
+export import :meta;
+export import :monad;
+export import :parexp;
+export import :math;
+export import :containers;
+export import :io;
+export import :coro;

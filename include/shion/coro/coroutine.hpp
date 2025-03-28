@@ -1,14 +1,9 @@
 #pragma once
 
-#include "../shion_essentials.hpp"
+#include <shion/common/defines.hpp>
 
-namespace shion {
-
-struct coroutine_dummy {
-	int *handle_dummy = nullptr;
-};
-
-}
+#if !SHION_BUILDING_MODULES
+#include <shion/common.hpp>
 
 #include "coro.hpp"
 #include "awaitable.hpp"
@@ -18,8 +13,13 @@ struct coroutine_dummy {
 #include <exception>
 #include <utility>
 #include <type_traits>
+#endif
 
-namespace shion {
+namespace SHION_NAMESPACE {
+
+SHION_EXPORT struct coroutine_dummy {
+	int *handle_dummy = nullptr;
+};
 
 namespace detail {
 
@@ -44,7 +44,7 @@ using handle_t = std_coroutine::coroutine_handle<promise_t<R>>;
  *
  * @tparam R Return type of the coroutine. Can be void, or a complete object that supports move construction and move assignment.
  */
-template <typename R>
+SHION_EXPORT template <typename R>
 class coroutine : public basic_awaitable<coroutine<R>> {
 	/**
 	 * @brief Promise has friend access for the constructor
@@ -351,15 +351,15 @@ namespace detail::coroutine {
 
 } // namespace detail
 
-static_assert(detail::is_abi_compatible<coroutine<void>, coroutine_dummy>);
-static_assert(detail::is_abi_compatible<coroutine<int>, coroutine_dummy>);
+static_assert(is_placeholder_for<coroutine<void>, coroutine_dummy>);
+static_assert(is_placeholder_for<coroutine<int>, coroutine_dummy>);
 
 } // namespace shion
 
 /**
  * @brief Specialization of std::coroutine_traits, helps the standard library figure out a promise type from a coroutine function.
  */
-template<typename R, typename... Args>
-struct shion::detail::std_coroutine::coroutine_traits<shion::coroutine<R>, Args...> {
+SHION_EXPORT template<typename R, typename... Args>
+struct std::coroutine_traits<shion::coroutine<R>, Args...> {
 	using promise_type = shion::detail::coroutine::promise_t<R>;
 };

@@ -1,13 +1,16 @@
 #ifndef SHION_IO_UTILS_H_
 #define SHION_IO_UTILS_H_
 
+#include <shion/common/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
 #include <cstdio>
+#include <vector>
+#include <shion/common.hpp>
+#include <shion/utility/unique_handle.hpp>
+#endif
 
-#include "../shion_essentials.hpp"
-#include "../utility/unique_handle.hpp"
-#include "../tools.hpp"
-
-namespace shion {
+SHION_EXPORT namespace SHION_NAMESPACE {
 
 inline namespace io {
 
@@ -17,7 +20,7 @@ inline constexpr auto close_file = [](FILE* f) {
 
 using managed_file = shion::unique_ptr<FILE, close_file>;
 
-std::vector<byte> read_file(const char *path) {
+inline std::vector<byte> read_file(const char *path) {
 	auto f = managed_file{fopen(path, "rb")};
 
 	if (!f) {

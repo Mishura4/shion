@@ -1,13 +1,16 @@
 #ifndef SHION_MATH_UTIL_H_
 #define SHION_MATH_UTIL_H_
 
+#include <shion/common/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
 #include <limits>
 #include <type_traits>
 
-#include "../shion_essentials.hpp"
-#include "../tools.hpp"
+#include <shion/common.hpp>
+#endif
 
-namespace shion {
+SHION_EXPORT namespace SHION_NAMESPACE {
 
 template <class T, class U>
 struct ratio {
