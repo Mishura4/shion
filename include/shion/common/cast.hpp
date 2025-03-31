@@ -4,8 +4,10 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#  include <concepts>
-#  include <type_traits>
+#  if !SHION_IMPORT_STD
+#    include <concepts>
+#    include <type_traits>
+#  endif
 
 #  include <shion/common/types.hpp>
 #endif /* SHION_BUILDING_MODULES */

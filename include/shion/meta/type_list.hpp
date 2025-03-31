@@ -72,9 +72,29 @@ SHION_EXPORT template <typename T, typename... Args>
 requires (is_unique<T, Args...>)
 inline constexpr size_t index_of = type_list<Args...>::template index_of<T>;
 
+#if defined(_cpp_pack_indexing)
 SHION_EXPORT template <size_t N, typename... Args>
-using pack_type = typename type_list<Args...>::template type<N>;
+struct pack_element {
+	using type = Args...[N];
+};
+#else
+SHION_EXPORT template <size_t N, typename... Args>
+struct pack_element {
+	using type = typename type_list<Args...>::template type<N>;
+};
+#endif
 
+SHION_EXPORT template <size_t N, typename... Args>
+using pack_element_t = typename pack_element<N, Args...>::type;
+
+SHION_EXPORT template <typename... Args>
+using pack_first_t = typename pack_element<0, Args...>::type;
+
+SHION_EXPORT template <typename... Args>
+using pack_last_t = typename pack_element<sizeof...(Args) - 1, Args...>::type;
+
+SHION_EXPORT template <size_t N, typename... Args>
+using pack_type [[deprecated("use pack_element_t")]] = pack_element_t<N, Args...>;
 
 }
 

@@ -3,7 +3,9 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#  include <coroutine>
+#  if !SHION_IMPORT_STD
+#    include <coroutine>
+#  endif
 #  include <shion/common.hpp>
 #endif
 

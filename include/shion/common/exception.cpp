@@ -8,8 +8,8 @@
 #		include <functional>
 #		include <source_location>
 #	endif /* SHION_IMPORT_STD */
+
 #	include <shion/common/exception.hpp>
-#	include <shion/parexp/expr.hpp>
 #endif
 
 namespace SHION_NAMESPACE

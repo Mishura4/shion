@@ -1,15 +1,21 @@
 #ifndef SHION_TOOLS_WORKER_H_
 #define SHION_TOOLS_WORKER_H_
 
-#include <vector>
-#include <functional>
-#include <thread>
-#include <mutex>
-#include <memory>
-#include <utility>
+#include <shion/common/defines.hpp>
 
-#include "shion_essentials.hpp"
-#include "coro/awaitable.hpp"
+#if !SHION_BUILDING_LIBRARY
+#  if !SHION_IMPORT_STD
+#    include <vector>
+#    include <functional>
+#    include <thread>
+#    include <mutex>
+#    include <memory>
+#    include <utility>
+#  endif
+
+#  include <shion/common.hpp>
+#  include <shion/coro/awaitable.hpp>
+#endif
 
 namespace shion {
 

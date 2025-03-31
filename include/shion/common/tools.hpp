@@ -4,13 +4,15 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#include <utility>
-#include <functional>
-#include <optional>
-#include <memory>
-#include <cassert>
-#include <ranges>
-#include <optional>
+#  if !SHION_IMPORT_STD
+#    include <utility>
+#    include <functional>
+#    include <optional>
+#    include <memory>
+#    include <cassert>
+#    include <ranges>
+#    include <optional>
+#  endif
 #endif
 
 namespace shion {

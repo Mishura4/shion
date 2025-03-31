@@ -1,4 +1,11 @@
-#include <shion/worker.hpp>
+#include <shion/common/defines.hpp>
+
+#if !SHION_BUILDING_MODULES
+#  if SHION_IMPORT_STD
+	import std;
+#  endif
+#  include <shion/worker.hpp>
+#endif
 
 namespace shion {
 

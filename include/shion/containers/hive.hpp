@@ -325,6 +325,8 @@ class hive {
 	using page_riterator = typename std::list<detail::hive_page<T>>::reverse_iterator;
 
 public:
+	static inline constexpr auto elements_per_page = detail::hive_page_num_elements<T>;
+	
 	hive() = default;
 	hive(hive const& rhs) requires (std::is_copy_constructible_v<T>) = default;
 	hive(hive&& rhs) requires (std::is_move_constructible_v<T>) = default;

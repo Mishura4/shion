@@ -3,10 +3,12 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#  include <source_location>
-#  include <format>
-#  include <exception>
-#  include <string>
+#  if !SHION_IMPORT_STD
+#    include <source_location>
+#    include <format>
+#    include <exception>
+#    include <string>
+#  endif
 
 #  include <shion/common/types.hpp>
 #endif

@@ -4,8 +4,10 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#  include <string_view>
-#  include <chrono>
+#  if !SHION_IMPORT_STD
+#    include <string_view>
+#    include <chrono>
+#  endif
 
 #  include <shion/common/types.hpp>
 #  include <shion/common/cast.hpp>

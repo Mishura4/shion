@@ -4,11 +4,12 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#  include <cstddef>
-#  include <cstdint>
-#  include <chrono>
-
-#  include <type_traits>
+#  if !SHION_IMPORT_STD
+#    include <cstddef>
+#    include <cstdint>
+#    include <chrono>
+#    include <type_traits>
+#  endif
 #endif /* !SHION_BUILDING_MODULES */
 
 SHION_EXPORT namespace SHION_NAMESPACE
@@ -60,6 +61,11 @@ using ssize_t = std::ptrdiff_t;
 using namespace aliases;
 
 struct wildcard {
+	wildcard() = default;
+	
+	template <typename T>
+	constexpr wildcard(T&&) noexcept {}
+	
 	template <typename T>
 	constexpr operator T() noexcept(std::is_nothrow_constructible_v<T>) {
 		return {};
@@ -89,6 +95,34 @@ struct constant { inline constexpr static auto value = V; };
 
 template <auto V>
 inline constexpr auto constant_v = constant<V>::value;
+
+template <typename T>
+requires (!std::same_as<T, T>)
+struct ill_formed_t {};
+
+template <typename T>
+concept unsatisfyable = false;
+
+template <typename T>
+concept storage_byte = std::same_as<typename std::remove_cv<T>::type, std::byte> || std::same_as<typename std::remove_cv<T>::type, unsigned char>;
+
+template <typename T>
+concept storage_range = std::ranges::range<T> && storage_byte<std::ranges::range_value_t<T>>;
+
+template <typename T>
+concept storage_pointer = std::is_pointer_v<T> && storage_byte<typename std::remove_pointer<typename std::decay<T>::type>::type>;
+
+template <typename T>
+concept storage_range_like = std::is_class_v<typename std::remove_cvref<T>::type> && storage_byte<typename std::remove_cvref_t<T>::value_type>;
+
+template <typename T>
+concept storage_buffer = storage_range<T>
+	|| (std::is_pointer_v<typename std::remove_cvref<T>::type> && storage_byte<typename std::remove_pointer<typename std::remove_cvref<T>::type>::type>)
+	|| (std::is_class_v<typename std::remove_cvref<T>::type> && storage_byte<typename std::remove_cvref_t<T>::value_type>);
+
+struct uninitialized_t {};
+
+inline constexpr auto uninitialized = uninitialized_t{};
 
 }
 

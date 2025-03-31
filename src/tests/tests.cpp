@@ -19,6 +19,11 @@ std::vector<test_suite> init() {
 	containers.make_test("hive with trivial type", &hive_test_trivial);
 	containers.make_test("hive with non-trivial type", &hive_test_nontrivial);
 
+	auto& io = ret.emplace_back("I/O");
+	io.make_test("serializer_helper with fundamental types", &serializer_helper_fundamental);
+	io.make_test("serializer_helper with tuples", &serializer_helper_tuples);
+	io.make_test("serializer_helper with ranges", &serializer_helper_ranges);
+
 	return ret;
 }
 
@@ -56,7 +61,7 @@ auto test::get_duration() const noexcept -> std::chrono::duration<double, std::m
 void test::run() {
 	if (state == status::skipped)
 		return;
-		g_logger->info("{} {}", starting_str, name);
+	g_logger->info("{} {}", starting_str, name);
 	state = status::started;
 	start_time = app_clock::now();
 	try {

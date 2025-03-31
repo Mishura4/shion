@@ -4,8 +4,10 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#include <utility>
-#include <type_traits>
+#  if !SHION_IMPORT_STD
+#    include <utility>
+#    include <type_traits>
+#  endif
 #endif /* SHION_BUILDING_MODULES */
 
 namespace shion {

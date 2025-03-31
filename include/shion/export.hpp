@@ -23,4 +23,9 @@
 
 #include <shion/common/defines.hpp>
 
+namespace SHION_NAMESPACE
+{
+
+}
+
 #endif /* SHION_MODULES_H_ */

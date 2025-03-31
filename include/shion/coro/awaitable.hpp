@@ -3,21 +3,23 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#include <iostream>
+#  if !SHION_IMPORT_STD
+#    include <iostream>
+#    include <mutex>
+#    include <utility>
+#    include <type_traits>
+#    include <functional>
+#    include <atomic>
+#    include <cstddef>
+#    include <variant>
+#    include <optional>
+#    include <exception>
+#    include <condition_variable>
+#  endif
 
-#include <shion/coro/coro.hpp>
-#include <shion/common.hpp>
+#  include <shion/coro/coro.hpp>
+#  include <shion/common.hpp>
 
-#include <mutex>
-#include <utility>
-#include <type_traits>
-#include <functional>
-#include <atomic>
-#include <cstddef>
-#include <variant>
-#include <optional>
-#include <exception>
-#include <condition_variable>
 #endif
 
 namespace SHION_NAMESPACE {

@@ -29,6 +29,10 @@
 #  define SHION_MODULE_LIBRARY 0
 #endif
 
+#ifndef SHION_IMPORT_STD
+#  define SHION_IMPORT_STD 0
+#endif
+
 // ------------- Internals -------------
 #if SHION_SHARED
 #  if _WIN32
@@ -77,11 +81,34 @@
 #  endif
 #endif
 
+#if defined(__clang__)
+#  define SHION_STD_ATTR clang
+#elif defined(_MSC_VER)
+#  define SHION_STD_ATTR msvc
+#elif defined(__GNUC__)
+#  define SHION_STD_ATTR gnu
+#else
+#  define SHION_STR_ATTR
+#endif
+
+#  define SHION_LIFETIMEBOUND [[ SHION_STD_ATTR :: lifetimebound ]]
+
 #if _MSC_VER
 #  define SHION_CPPVER _MSVC_LANG
 #else
 #  define SHION_CPPVER __cplusplus
 #endif /* _MSC_VER */
+
+#if defined(__has_builtin)
+#  define SHION_HAS_BUILTIN(a) __has_builtin(a)
+#else
+  // MSVC, for some reason
+#  define SHION_HAS_BUILTIN(a) 0
+#endif
+
+#ifndef SHION_HAS_PFR
+#  define SHION_HAS_PFR 0
+#endif
 
 #include <shion/common/assert.hpp>
 

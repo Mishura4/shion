@@ -165,7 +165,7 @@ public:
 
 	template <typename T>
 	constexpr friend decltype(auto) operator>>(basic_string_literal const& lhs, T&& rhs) noexcept(noexcept(std::declval<char const (&)[N + 1]>() >> std::declval<T>())) {
-		return lhs.str >> std::forward<T>(lhs);
+		return lhs.str >> std::forward<T>(rhs);
 	}
 
 	constexpr operator std::string_view() const noexcept {

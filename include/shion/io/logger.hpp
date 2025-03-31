@@ -4,16 +4,19 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#include <variant>
-#include <filesystem>
-#include <fstream>
-#include <functional>
-#include <mutex>
-#include <memory>
-#include <utility>
-#include <format>
-#include <shion/common.hpp>
-#include <shion/utility/bit_mask.hpp>
+#  if !SHION_IMPORT_STD
+#    include <variant>
+#    include <filesystem>
+#    include <fstream>
+#    include <functional>
+#    include <mutex>
+#    include <memory>
+#    include <utility>
+#    include <format>
+#  endif
+
+#  include <shion/common.hpp>
+#  include <shion/utility/bit_mask.hpp>
 #endif
 
 SHION_EXPORT namespace SHION_NAMESPACE {

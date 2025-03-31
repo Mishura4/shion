@@ -4,6 +4,7 @@ module;
 #include <shion/common/detail.hpp>
 
 #if !SHION_IMPORT_STD
+#include <tuple>
 #include <algorithm>
 #include <utility>
 #include <span>
@@ -20,6 +21,8 @@ module;
 #include <functional>
 #include <mutex>
 #include <format>
+#include <span>
+#include <bit>
 #endif
 
 export module shion:io;
@@ -29,13 +32,16 @@ import std;
 #endif
 import :common;
 import :utility;
+import :meta;
+import :monad;
 
 #if SHION_EXTERN_MODULES
 extern "C++" {
 #endif
-	
+
 #include "shion/io/logger.hpp"
 #include "shion/io/utils.hpp"
+#include "shion/io/serializer.hpp"
 
 #if SHION_MODULE_LIBRARY or !SHION_EXTERN_MODULES
 #include "shion/io/logger.cpp"

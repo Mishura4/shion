@@ -36,6 +36,7 @@ extern "C++" {
 #endif
 	
 #include "shion/containers/hive.hpp"
+#include "shion/containers/table.hpp"
 
 #if SHION_EXTERN_MODULES
 }

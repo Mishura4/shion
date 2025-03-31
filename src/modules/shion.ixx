@@ -2,6 +2,8 @@ module;
 
 #include <shion/export.hpp>
 
+#include <compare> // MSVC; it is a mystery as to why it's required here of all places
+
 export module shion;
 
 export import :common;

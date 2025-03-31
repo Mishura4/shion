@@ -7,9 +7,10 @@ module;
 #include <functional>
 #include <optional>
 
-export module shion.tests;
+export module shion.tests:suite;
 
 import shion;
+
 export namespace shion::tests {
 
 inline const auto failure_str = "[\u001b[31mFAILURE\u001b[0m]";
@@ -38,27 +39,19 @@ public:
 	{}
 
 	test(const test &) = delete;
-
 	test(test&&) = default;
 
 	test& operator=(const test&) = delete;
-
 	test& operator=(test&&) = default;
-
 	~test() = default;
 
 	void fail(std::string reason = {}, const std::source_location &where = std::source_location::current());
-
 	void success();
-
 	void skip();
-
 	void run();
 
 	status get_status() const noexcept;
-
 	auto get_duration() const noexcept -> std::chrono::duration<double, std::milli>;
-
 	const std::string& get_name() const noexcept;
 
 private:
@@ -90,8 +83,5 @@ struct test_failure_exception : internal_exception {
 	using internal_exception::internal_exception;
 	using internal_exception::operator=;
 };
-
-void hive_test_nontrivial(test& self);
-void hive_test_trivial(test& self);
 
 } // namespace shion::tests

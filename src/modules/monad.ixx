@@ -17,4 +17,5 @@ import std;
 
 #include "shion/monad/invoke.hpp"
 #include "shion/monad/compare.hpp"
+#include "shion/monad/arithmetic.hpp"
 #include "shion/monad/object.hpp"

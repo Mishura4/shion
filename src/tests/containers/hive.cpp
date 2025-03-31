@@ -17,6 +17,7 @@ module shion.tests;
 #if SHION_MODULES
 import shion;
 #endif
+
 namespace shion::tests {
 
 struct non_trivial {
@@ -39,20 +40,20 @@ struct non_trivial {
 };
 
 template <typename T>
-void hive_test(test& self) {
+bool hive_test(test& self) {
 	using hive = shion::hive<T>;
 	hive h;
 
 	auto first = h.emplace(5);
 	if (first == h.end() || *first != 5) {
 		self.fail("failed to emplace first value");
-		return;
+		return false;
 	}
 
 	auto second = h.emplace(42);
 	if (second == h.end() || *second != 42) {
 		self.fail("failed to emplace second value");
-		return;
+		return false;
 	}
 
 	TEST_ASSERT(self, h.at_raw_index(0) == first);
@@ -126,27 +127,27 @@ void hive_test(test& self) {
 	}
 	TEST_ASSERT(self, h.begin() == h.end() && h.size() == 0);
 
-	for (i = 0; i < detail::hive_page_num_elements<T>; ++i) {
+	for (i = 0; i < hive::elements_per_page; ++i) {
 		h.emplace(i);
 	}
-	TEST_ASSERT(self, h.capacity() == detail::hive_page_num_elements<T>);
+	TEST_ASSERT(self, h.capacity() == hive::elements_per_page);
 	auto first_second_page = h.emplace(i);
 	TEST_ASSERT(self, *first_second_page == i);
-	TEST_ASSERT(self, h.capacity() == 2 * detail::hive_page_num_elements<T>);
+	TEST_ASSERT(self, h.capacity() == 2 * hive::elements_per_page);
 	it = h.begin();
-	for (i = 0; i < detail::hive_page_num_elements<T>; ++i) {
+	for (i = 0; i < hive::elements_per_page; ++i) {
 		TEST_ASSERT(self, *it == i);
 		++it;
 	}
 	TEST_ASSERT(self, it != h.end());
 	TEST_ASSERT(self, it == first_second_page);
-	TEST_ASSERT(self, it == h.at_raw_index(detail::hive_page_num_elements<T>));
+	TEST_ASSERT(self, it == h.at_raw_index(hive::elements_per_page));
 	it = h.begin();
-	for (i = 0; i < detail::hive_page_num_elements<T>; ++i) {
+	for (i = 0; i < hive::elements_per_page; ++i) {
 		TEST_ASSERT(self, *it == i);
 		it = it.erase();
 	}
-	TEST_ASSERT(self, it == h.at_raw_index(detail::hive_page_num_elements<T>));
+	TEST_ASSERT(self, it == h.at_raw_index(hive::elements_per_page));
 	TEST_ASSERT(self, h.end() == h.at_raw_index(0));
 	TEST_ASSERT(self, it != h.end());
 	TEST_ASSERT(self, it == first_second_page);
@@ -171,14 +172,14 @@ void hive_test(test& self) {
 	TEST_ASSERT(self, result.second);
 	TEST_ASSERT(self, *result.first == 69);
 	TEST_ASSERT(self, *h.begin() == 21 && (++result.first) == h.end());
-	result = h.try_emplace(4 * detail::hive_page_num_elements<T>, 4 * detail::hive_page_num_elements<T>);
+	result = h.try_emplace(4 * hive::elements_per_page, 4 * hive::elements_per_page);
 	TEST_ASSERT(self, result.second);
-	TEST_ASSERT(self, *result.first == 4 * detail::hive_page_num_elements<T>);
+	TEST_ASSERT(self, *result.first == 4 * hive::elements_per_page);
 	TEST_ASSERT(self, *h.begin() == 21 && (++result.first) == h.end());
-	result = h.try_emplace(2 * detail::hive_page_num_elements<T>, 2 * detail::hive_page_num_elements<T>);
+	result = h.try_emplace(2 * hive::elements_per_page, 2 * hive::elements_per_page);
 	TEST_ASSERT(self, result.second);
-	TEST_ASSERT(self, *result.first == 2 * detail::hive_page_num_elements<T>);
-	TEST_ASSERT(self, *h.begin() == 21 && *(++result.first) == 4 * detail::hive_page_num_elements<T>);
+	TEST_ASSERT(self, *result.first == 2 * hive::elements_per_page);
+	TEST_ASSERT(self, *h.begin() == 21 && *(++result.first) == 4 * hive::elements_per_page);
 	TEST_ASSERT(self, h.pages() == 3);
 	TEST_ASSERT(self, h.size() == 5);
 
@@ -203,14 +204,15 @@ void hive_test(test& self) {
 	} else {
 		TEST_ASSERT(self, !std::is_move_assignable_v<hive>);
 	}
+	return true;
 }
 
 
-void hive_test_trivial(test& self) {
+bool hive_test_trivial(test& self) {
 	return hive_test<ssize_t>(self);
 }
 
-void hive_test_nontrivial(test& self) {
+bool hive_test_nontrivial(test& self) {
 	return hive_test<non_trivial>(self);
 }
 
