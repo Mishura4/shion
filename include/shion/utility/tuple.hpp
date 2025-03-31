@@ -454,8 +454,8 @@ constexpr decltype(auto) get(tuple<Args...> const&& t) noexcept {
 }
 
 SHION_EXPORT template <typename... Args>
-constexpr tuple<Args&...> tie(Args&... args) noexcept {
-	return { args... };
+constexpr auto tie(Args &... args) noexcept -> tuple<Args&...> {
+	return tuple<Args&...>{ args... };
 }
 
 SHION_EXPORT template <size_t I, typename... Args>

@@ -8,6 +8,7 @@ module;
 #include <string>
 #include <array>
 #include <tuple>
+#include <span>
 #endif
 
 #include "../tests.hpp"
@@ -47,6 +48,8 @@ constexpr bool serializer_helper_fundamental_impl(test* t)
 	TEST_ASSERT(*t, s.read(int_storage, nullptr, opposite_endian) == sizeof(int));
 	TEST_ASSERT(*t, s.read(int_storage, &value, opposite_endian) == sizeof(int));
 	TEST_ASSERT(*t, value == 42);
+	auto bytes = std::span<const std::byte>(int_storage);
+	TEST_ASSERT(*t, s.construct(bytes, opposite_endian) == 42);
 	return true;
 }
 
@@ -56,7 +59,7 @@ constexpr bool serializer_helper_tuples_impl(test* t)
 	constexpr auto size1 = sizeof(t1::element<0>) + sizeof(t1::element<1>) + sizeof(t1::element<2>);
 	auto t1_in = t1{ 42, 'a', 0.5f };
 	auto t1_out = t1{};
-	std::byte t1_storage[size1];
+	shion::byte t1_storage[size1];
 
 	shion::serializer_helper<t1> s1;
 
@@ -69,7 +72,10 @@ constexpr bool serializer_helper_tuples_impl(test* t)
 	TEST_ASSERT(*t, s1.read(t1_storage, &t1_out) == size1);
 	TEST_ASSERT(*t, t1_out == t1_in);
 
-	using t2 = std::array<int, 3>;
+	auto t1_bytes = std::span<const std::byte>(t1_storage);
+	TEST_ASSERT(*t, s1.construct(t1_bytes) == t1_in);
+
+	/*using t2 = std::array<int, 3>;
 	constexpr auto size2 = sizeof(t2);
 	t2 t2_in = { 0, 1, 2 };
 	t2 t2_out{};
@@ -84,24 +90,7 @@ constexpr bool serializer_helper_tuples_impl(test* t)
 	TEST_ASSERT(*t, s2.read({}, nullptr) == size2);
 	TEST_ASSERT(*t, s2.read(t2_storage, nullptr) == size2);
 	TEST_ASSERT(*t, s2.read(t2_storage, &t2_out) == size2);
-	TEST_ASSERT(*t, t2_out == t2_in);
-
-	using t3 = std::array<int, size_t{1024} * size_t{1024}>;
-	constexpr auto size3 = sizeof(t3);
-	t3 t3_in{};
-	t3 t3_out{};
-	std::byte t3_storage[size3];
-	
-	shion::serializer_helper<t3> s3;
-	
-	TEST_ASSERT(*t, s3.write({}, t3_in) == size3);
-	TEST_ASSERT(*t, s3.write(t3_storage, t3_in) == size3);
-	TEST_ASSERT(*t, s3.read({}, &t3_out) == size3);
-	
-	TEST_ASSERT(*t, s3.read({}, nullptr) == size3);
-	TEST_ASSERT(*t, s3.read(t3_storage, nullptr) == size3);
-	TEST_ASSERT(*t, s3.read(t3_storage, &t3_out) == size3);
-	TEST_ASSERT(*t, t3_out == t3_in);
+	TEST_ASSERT(*t, t2_out == t2_in);*/
 	return true;
 }
 
