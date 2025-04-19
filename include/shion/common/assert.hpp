@@ -22,7 +22,7 @@ namespace SHION_NAMESPACE
 #ifndef NDEBUG
 #  define SHION_ASSERT(a) assert(a)
 #else
-#  define SHION_ASSERT(a) if (!(a)) shion::unreachable();
+#  define SHION_ASSERT(a) do { if (!(a)) SHION_NAMESPACE ::unreachable(); } while(false)
 #endif
 
 }

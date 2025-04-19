@@ -124,6 +124,15 @@ struct uninitialized_t {};
 
 inline constexpr auto uninitialized = uninitialized_t{};
 
+template <typename... Args>
+struct tuple;
+// I really don't want to put this here, but because MSVC struggles to
+// export partial specializations of third-party types,
+// std::tuple_size<shion::tuple<...>> isn't exported.
+// Long story short, we need to forward declare this here,
+// because we want to declare some helpers in meta.ixx
+// because we can't use std::tuple_size directly for things like fixed_size_range.
+
 }
 
 #endif /* SHION_TYPES_H_ */

@@ -100,6 +100,12 @@ inline constexpr bool is_compatible_reference<T&&, U&&> = true;
 SHION_EXPORT template <typename T, typename U>
 inline constexpr bool is_compatible_reference<const T&&, U&&> = true;
 
+SHION_EXPORT template <std::signed_integral T = int>
+inline constexpr T bool_to_sign(bool value) noexcept
+{
+	return (static_cast<T>(value) * 2 - 1);
+}
+
 template <typename T>
 class and_then {
 public:

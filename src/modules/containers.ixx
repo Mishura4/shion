@@ -20,6 +20,8 @@ module;
 #include <functional>
 #include <list>
 #include <format>
+#include <unordered_set>
+#include <unordered_map>
 #endif
 
 export module shion:containers;
@@ -36,7 +38,6 @@ extern "C++" {
 #endif
 	
 #include "shion/containers/hive.hpp"
-#include "shion/containers/table.hpp"
 
 #if SHION_EXTERN_MODULES
 }

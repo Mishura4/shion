@@ -15,44 +15,6 @@
 
 namespace SHION_NAMESPACE {
 
-SHION_EXPORT template <typename... Args>
-struct tuple;
-
-SHION_EXPORT template <typename T>
-struct tuple_size {};
-
-SHION_EXPORT template <typename... Args>
-struct tuple_size<tuple<Args...>> : std::integral_constant<size_t, sizeof...(Args)>
-{
-};
-
-SHION_EXPORT template <size_t I, typename T>
-struct tuple_element {};
-
-SHION_EXPORT template <typename T>
-struct tuple_size_selector // Workaround msvc struggling to export std::tuple_size partial specialization
-{
-	using type = std::tuple_size<T>;
-};
-
-SHION_EXPORT template <typename... Args>
-struct tuple_size_selector<tuple<Args...>>
-{
-	using type = tuple_size<tuple<Args...>>;
-};
-
-SHION_EXPORT template <size_t I, typename T>
-struct tuple_element_selector // Workaround msvc struggling to export std::tuple_size partial specialization
-{
-	using type = std::tuple_element<I, T>;
-};
-
-SHION_EXPORT template <size_t I, typename... Args>
-struct tuple_element_selector<I, tuple<Args...>>
-{
-	using type = tuple_element<I, tuple<Args...>>;
-};
-
 namespace detail {
 
 template <typename T, typename Tuple, typename IdxSeq>

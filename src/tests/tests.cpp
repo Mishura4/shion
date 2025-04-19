@@ -22,7 +22,13 @@ std::vector<test_suite> init() {
 	auto& io = ret.emplace_back("I/O");
 	io.make_test("serializer_helper with fundamental types", &serializer_helper_fundamental);
 	io.make_test("serializer_helper with tuples", &serializer_helper_tuples);
-	io.make_test("serializer_helper with ranges", &serializer_helper_ranges);
+	io.make_test("serializer_helper with contiguous ranges", &serializer_helper_contiguous_ranges);
+	io.make_test("serializer_helper with list ranges", &serializer_helper_list_ranges);
+
+	auto& coro = ret.emplace_back("Coro");
+	coro.make_test("state_machine simple generator", &state_machine_generator);
+	coro.make_test("state_machine awaitable", &state_machine_coroutine);
+	coro.make_test("state_machine continuation", &state_machine_continuation);
 
 	return ret;
 }

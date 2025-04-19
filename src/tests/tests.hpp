@@ -6,4 +6,9 @@
 		return false; \
 	} while(false) \
 
+#define TEST_CO_ASSERT(test, a) if (!(a)) do { \
+		if (!std::is_constant_evaluated()) (test).fail(#a); \
+		co_return false; \
+	} while(false) \
+
 #endif

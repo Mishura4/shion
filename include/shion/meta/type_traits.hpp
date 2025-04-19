@@ -3,6 +3,8 @@
 
 #include <shion/common/defines.hpp>
 
+#include "type_traits.hpp"
+
 #if !SHION_BUILDING_MODULES
 #  include <concepts>
 #  include <type_traits>
@@ -207,6 +209,72 @@ SHION_EXPORT_START
 
 template <typename T>
 concept implicit_lifetime_type = is_implicit_lifetime_v<T>;
+
+template <typename T>
+struct tuple_size {};
+
+template <typename... Args>
+struct tuple_size<tuple<Args...>> : std::integral_constant<size_t, sizeof...(Args)>
+{
+};
+
+template <size_t I, typename T>
+struct tuple_element {};
+
+template <typename T>
+struct tuple_size_selector // Workaround msvc struggling to export std::tuple_size partial specialization
+{
+	using type = std::tuple_size<T>;
+};
+
+template <typename... Args>
+struct tuple_size_selector<tuple<Args...>>
+{
+	using type = tuple_size<tuple<Args...>>;
+};
+
+template <size_t I, typename T>
+struct tuple_element_selector // Workaround msvc struggling to export std::tuple_size partial specialization
+{
+	using type = std::tuple_element<I, T>;
+};
+
+template <size_t I, typename... Args>
+struct tuple_element_selector<I, tuple<Args...>>
+{
+	using type = tuple_element<I, tuple<Args...>>;
+};
+
+template <typename T>
+concept tuple_like = requires { tuple_size_selector<T>::type::value; };
+
+template <typename T>
+concept tuple_range = std::ranges::range<T> && tuple_like<T>;
+
+template <typename T, typename Value = typename std::iterator_traits<decltype(std::declval<T>().begin())>::value_type>
+concept pushable_container =
+	requires (T cont, Value value) { cont.push_back(std::forward<Value>(value)); }
+	|| requires (T cont, Value value) { cont.push(std::forward<Value>(value)); };
+
+template <typename T, typename Value = typename std::iterator_traits<decltype(std::declval<T>().begin())>::value_type>
+concept emplaceable_container =
+	requires (T cont, Value value) { cont.emplace_back(std::forward<Value>(value)); }
+	|| requires (T cont, Value value) { cont.emplace(std::forward<Value>(value)); };
+
+template <typename T>
+concept resizable_container = requires (T range) { range.resize(1); };
+
+template <typename T>
+concept reservable_container = requires (T range) { range.reserve(1); };
+
+template <typename T>
+concept dynamic_size_container =
+	resizable_container<T>
+	|| pushable_container<T>
+	|| emplaceable_container<T>;
+
+template <typename T>
+concept appendable_range = std::ranges::range<T> && dynamic_size_container<T>;
 
 SHION_EXPORT_END
 

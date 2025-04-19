@@ -6,9 +6,12 @@ module;
 #  include <concepts>
 #  include <type_traits>
 #  include <chrono>
+#  include <tuple>
 #endif
 
 export module shion:meta;
+
+import :common;
 
 #if SHION_IMPORT_STD
 import std;

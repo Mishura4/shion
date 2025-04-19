@@ -83,15 +83,39 @@
 
 #if defined(__clang__)
 #  define SHION_STD_ATTR clang
+
+#  define SHION_LIFETIMEBOUND [[ SHION_STD_ATTR ::lifetimebound ]]
+#  define SHION_COROLIFETIMEBOUND [[ SHION_STD_ATTR ::coro_lifetimebound ]]
+#  define SHION_CORORETURN [[ SHION_STD_ATTR ::coro_wrapper ]]
 #elif defined(_MSC_VER)
 #  define SHION_STD_ATTR msvc
+
+#  define SHION_LIFETIMEBOUND [[ SHION_STD_ATTR ::lifetimebound ]]
 #elif defined(__GNUC__)
 #  define SHION_STD_ATTR gnu
 #else
 #  define SHION_STR_ATTR
 #endif
 
-#  define SHION_LIFETIMEBOUND [[ SHION_STD_ATTR :: lifetimebound ]]
+#ifndef SHION_COROLIFETIMEBOUND
+#  define SHION_COROLIFETIMEBOUND
+#endif
+#ifndef SHION_COROLIFETIMEBOUND
+#  define SHION_COROLIFETIMEBOUND
+#endif
+#ifndef SHION_CORORETURN
+#  define SHION_CORORETURN
+#endif
+
+#if defined(__INTELLISENSE__) and __INTELLISENSE__
+#  define SHION_INTELLISENSE 1
+#elif (defined(__RESHARPER__) and __RESHARPER__) or (defined(__RSCPP_VERSION) and __RSCPP_VERSION)
+#  define SHION_INTELLISENSE 1
+#endif
+
+#ifndef SHION_INTELLISENSE
+#  define SHION_INTELLISENSE 0
+#endif
 
 #if _MSC_VER
 #  define SHION_CPPVER _MSVC_LANG

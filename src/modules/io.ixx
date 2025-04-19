@@ -34,6 +34,7 @@ import :common;
 import :utility;
 import :meta;
 import :monad;
+import :coro;
 
 #if SHION_EXTERN_MODULES
 extern "C++" {
