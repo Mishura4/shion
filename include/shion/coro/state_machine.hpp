@@ -279,7 +279,7 @@ protected:
 }
 
 SHION_EXPORT template <typename YieldRef, typename ReturnRef, typename Yield, typename Return>
-SHION_COROLIFETIMEBOUND class basic_state_machine : public detail::state_machine_resume<YieldRef, ReturnRef, Yield, Return, void>
+class SHION_COROLIFETIMEBOUND basic_state_machine : public detail::state_machine_resume<YieldRef, ReturnRef, Yield, Return, void>
 {
 	using my_base = detail::state_machine_resume<YieldRef, ReturnRef, Yield, Return, void>;
 
@@ -318,7 +318,7 @@ protected:
 };
 
 SHION_EXPORT template <typename Yield, typename Return>
-SHION_COROLIFETIMEBOUND class state_machine : public basic_state_machine<Yield, Return>
+class SHION_COROLIFETIMEBOUND state_machine : public basic_state_machine<Yield, Return>
 {
 public:
 	using my_base = basic_state_machine<Yield, Return>;

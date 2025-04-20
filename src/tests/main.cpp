@@ -31,7 +31,6 @@ struct dthread : std::thread {
 namespace tests = shion::tests;
 
 int main() {
-	shion::string_literal foo{"hey"};
 	using tests::g_logger;
 	g_logger.emplace(std::cout);
 	g_logger->set_time_formatter(nullptr);

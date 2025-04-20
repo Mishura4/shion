@@ -14,6 +14,7 @@ module;
 #include <tuple>
 #include <span>
 #include <variant>
+#include <coroutine>
 #endif
 
 #include "../tests.hpp"

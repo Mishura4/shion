@@ -223,7 +223,7 @@ private:
 	constexpr static inline bool implicitly_constructible = requires () { [](Args... args) -> my_base { return { std::forward<Args>(args)... }; }; };
 	
 public:
-	using typename my_base::element;
+	using my_base::element;
 
 	constexpr tuple() = default;
 	constexpr tuple(const tuple&) = default;

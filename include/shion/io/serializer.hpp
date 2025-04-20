@@ -18,6 +18,9 @@ namespace SHION_NAMESPACE
 inline namespace io
 {
 
+SHION_EXPORT template <typename T, typename Tag = void>
+struct serializer_helper;
+
 struct unknown_buffer_type
 {
 };
@@ -113,6 +116,7 @@ concept expandable_buffer = storage_buffer<T> && (
 								requires (T t, size_t n) { t.resize(n); }
 								|| requires (T t, std::ranges::range_value_t<T> v) { t.push_back(std::move(v)); }
 							);
+
 }
 
 inline namespace io
@@ -238,10 +242,17 @@ SHION_EXPORT struct writer
 SHION_EXPORT inline constexpr auto read = reader{};
 SHION_EXPORT inline constexpr auto write = writer{};
 
-}
+} // namespace io
 
 namespace detail::serializer
 {
+
+template <typename T>
+inline constexpr bool is_constant_size_serializer = false;
+
+template <typename T, typename Tag>
+	requires requires { serializer_helper<T, Tag>::constant_size; }
+inline constexpr bool is_constant_size_serializer<serializer_helper<T, Tag>> = serializer_helper<T, Tag>::constant_size;
 	
 inline constexpr unsigned char size_shift = (CHAR_BIT - 1);
 inline constexpr unsigned char size_bit = 1 << size_shift;
@@ -410,7 +421,7 @@ template <typename T, typename Tag, size_t... Ns>
 struct tuple_serializer<T, Tag, std::index_sequence<Ns...>>
 {
 	template <size_t N>
-	using proxy_t = serializer_helper<std::tuple_element_t<N, T>, Tag>;
+	using proxy_t = serializer_helper<std::remove_cv_t<std::tuple_element_t<N, T>>, Tag>;
 	using proxies_t = tuple<proxy_t<Ns>...>;
 	
 	static inline constexpr bool trivial = true;
@@ -438,7 +449,7 @@ struct tuple_serializer<T, Tag, std::index_sequence<Ns...>>
 		bool failed = false;
 		auto validate = [&sz, endian, bytes, &failed]<size_t N>(proxy_t<N>& proxy) mutable constexpr -> ptrdiff_t {
 			ptrdiff_t size;
-			if constexpr (requires { requires proxy_t<N>::constant_size; })
+			if constexpr (detail::serializer::is_constant_size_serializer<proxy_t<N>>)
 			{
 				(void)bytes;
 				(void)failed;
@@ -468,7 +479,7 @@ struct tuple_serializer<T, Tag, std::index_sequence<Ns...>>
 		SHION_ASSERT(static_cast<ptrdiff_t>(bytes.size()) >= size(bytes, endian));
 
 		ptrdiff_t sz = 0;
-		auto impl = [this, endian, bytes, &value, &sz]<size_t N>(proxy_t<N>& proxy) mutable constexpr {
+		auto impl = [endian, bytes, &value, &sz]<size_t N>(proxy_t<N>& proxy) mutable constexpr {
 			sz += proxy.read(bytes.subspan(sz), get<N>(value), endian);
 			return empty{};
 		};
@@ -487,7 +498,7 @@ struct tuple_serializer<T, Tag, std::index_sequence<Ns...>>
 			sz += size;
 			return size;
 		};
-		size_t allSizes[sizeof...(Ns)] [[maybe_unused]] = { validate.template operator()<Ns>(get<Ns>(proxies))... };
+		[[maybe_unused]] size_t allSizes[sizeof...(Ns)] = { validate.template operator()<Ns>(get<Ns>(proxies))... };
 
 		if (sz > bytes.size())
 			return sz;
@@ -563,6 +574,11 @@ struct serializer_input_iterator
 	}
 };
 
+} // namespace detail::serializer
+
+namespace detail::serializer
+{
+
 inline constexpr auto read_compressed_range_size(std::span<const std::byte> bytes)
 {
 	struct result
@@ -635,6 +651,61 @@ private:
 	using value_t = std::ranges::range_value_t<T>;
 	using iterator_t = serializer_input_iterator<value_t, Tag>;
 	using proxy_t = serializer_helper<value_t, Tag>;
+	using constructed_t = std::remove_cv_t<T>;
+
+	constexpr auto _construct_default(std::span<const byte>& bytes, size_t n, std::endian endian) const -> T
+	{
+		T ret;
+		if constexpr (resizable_container<T> && std::is_default_constructible_v<value_t>)
+		{
+			ret.resize(n);
+			if constexpr (std::is_trivially_copyable_v<value_t> && requires { proxy_t::trivial; })
+			{
+				std::memcpy(ret.data(), bytes.data(), sizeof(value_t) * n);
+				if constexpr (std::is_scalar_v<value_t> && sizeof(value_t) > 1)
+				{
+					if (endian != std::endian::native)
+					{
+						for (auto& v : ret)
+							v = std::byteswap(v);
+					}
+				}
+				bytes = bytes.subspan(sizeof(value_t) * n);
+			}
+			else
+			{
+				for (auto& value : ret)
+				{
+					size_t sz = serializer_helper<value_t, Tag>{}.read(bytes, value, endian);
+					bytes = bytes.subspan(sz);
+				}
+			}
+		}
+		else
+		{
+			if constexpr (reservable_container<T>)
+			{
+				ret.reserve(n);
+			}
+			for (size_t i = 0; i < n; ++i)
+			{
+				if constexpr (requires { ret.push_back(std::declval<value_t>()); }) // std::vector-like
+				{
+					ret.push_back(proxy_t{}.construct(bytes, endian));
+				}
+				else if constexpr ( requires { ret.push(std::declval<value_t>()); } ) // std::queue-like
+				{
+					ret.push(proxy_t{}.construct(bytes, endian));
+				}
+				else // insanity
+				{
+					size_t sz = proxy_t{}.read(bytes, &ret.push_back(), endian);
+					bytes = bytes.subspan(sz);
+				}
+			}
+		}
+		return ret;
+	}
 
 public:
 	constexpr auto construct(std::span<const byte>& bytes, std::endian endian = std::endian::native) const -> T {
@@ -660,48 +731,28 @@ public:
 				SHION_ASSERT(size_proxy{}.read(bytes, range_size, endian) > 0);
 			}
 		}
+
+#if !(defined(_LIBCPP_VERSION) && _LIBCPP_VERSION < 200000)
 		
-		if constexpr (std::constructible_from<T, std::from_range_t, decltype(std::views::counted(std::declval<iterator_t>(), range_size))>)
+#endif
+		if constexpr (!std::is_const_v<T> && std::is_default_constructible_v<T>)
+		{
+			return _construct_default(bytes, range_size, endian);
+		}
+		else if constexpr (std::constructible_from<T, iterator_t, size_t>)
+		{
+			return T(iterator_t{ bytes, endian }, range_size);
+		}
+		else if constexpr (std::constructible_from<T, std::from_range_t, decltype(std::views::counted(std::declval<iterator_t>(), range_size))>)
 		{
 			return T(std::from_range, std::views::counted(iterator_t{ bytes, endian }, range_size));
 		}
-		else if constexpr (std::is_default_constructible_v<T>)
+		else if constexpr (std::constructible_from<T, std::span<const byte>&, std::endian>)
 		{
-			T ret;
-			if constexpr (resizable_container<T> && std::is_default_constructible_v<value_t>)
-			{
-				ret.resize(range_size);
-				for (auto& value : ret)
-				{
-					size_t sz = serializer_helper<value_t, Tag>{}.read(bytes, &value, endian);
-					bytes = bytes.subspan(sz);
-				}
-			}
-			else
-			{
-				if constexpr (reservable_container<T>)
-				{
-					ret.reserve(range_size);
-				}
-				for (size_type i = 0; i < range_size; ++i)
-				{
-					if constexpr (requires { ret.push_back(std::declval<value_t>()); }) // std::vector-like
-					{
-						ret.push_back(proxy_t{}.construct(bytes, endian));
-					}
-					else if constexpr ( requires { ret.push(std::declval<value_t>()); } ) // std::queue-like
-					{
-						ret.push(proxy_t{}.construct(bytes, endian));
-					}
-					else // insanity
-					{
-						size_t sz = proxy_t{}.read(bytes, &ret.push_back(), endian);
-						bytes = bytes.subspan(sz);
-					}
-				}
-			}
-			return ret;
-		} else {
+			return T(bytes, endian);
+		}
+		else
+		{
 			static_assert(std::is_default_constructible_v<T>, "Unrecognized container construction, please specialize serializer_helper<T>.");
 			unreachable();
 		}
