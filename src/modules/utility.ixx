@@ -50,7 +50,6 @@ extern "C++" {
 #include "shion/utility/string_literal.hpp"
 #include "shion/utility/unique_handle.hpp"
 #include "shion/utility/uuid.hpp"
-#include "shion/utility/allocator.hpp"
 #include "shion/utility/bit_mask.hpp"
 
 #if SHION_EXTERN_MODULES
