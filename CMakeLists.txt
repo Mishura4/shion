@@ -33,13 +33,16 @@ if (MSVC AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	set(CLANG_CL true)
 endif()
 
-set(SHION_STATIC_LIBRARY (NOT ${BUILD_SHARED_LIBS}) CACHE BOOL "Whether to build shion as a static library")
+if (${BUILD_SHARED_LIBS})
+	set(SHION_BUILD_STATIC off)
+else ()
+	set(SHION_BUILD_STATIC on)
+endif ()
+
+
+set(SHION_STATIC_LIBRARY ${SHION_BUILD_STATIC} CACHE BOOL "Whether to build shion as a static library")
 set(SHION_MODULE_LIBRARY ${SHION_BUILD_MODULES} CACHE BOOL "Whether to build shion as a module library")
 set(SHION_SHARED_LIBRARY ${BUILD_SHARED_LIBS} CACHE BOOL "Whether to build shion as a shared library")
-
-set(SHION_SHARED_LIBRARY on)
-set(SHION_STATIC_LIBRARY off)
-set(SHION_MODULE_LIBRARY off)
 
 set(SHION_PRIVATE_BUILD_OPTIONS "")
 set(SHION_PUBLIC_BUILD_OPTIONS "")
@@ -144,11 +147,6 @@ function(create_library lib bin type)
 			PUBLIC
 				FILE_SET CXX_MODULES FILES "${SHION_MODULES}"
 		)
-		if (MSVC)
-			if (NOT CLANG_CL)
-				target_compile_options(shion-${lib} PUBLIC /wd5244) # #include <meow> in the purview of module shion.meow appears erroneous
-			endif ()
-		endif ()
 	endif ()
 	
 	add_library(shion::${lib} ALIAS shion-${lib})
