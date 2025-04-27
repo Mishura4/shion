@@ -89,14 +89,14 @@ public:
 		{
 			for (int i = 0; i * sizeof(result) < 16; ++i) {
 				auto val = static_cast<result>(rand());
-				for (int j = 0; j < sizeof(result); ++j) {
+				for (size_t j = 0; j < sizeof(result); ++j) {
 					ret._bytes[i * sizeof(result) + j] = static_cast<std::byte>(val >> ((sizeof(result) - 1 - j) * 8));
 				}
 			}
 		}
 		else
 		{
-			for (int i = 0; i * sizeof(result) < 16; ++i) {
+			for (size_t i = 0; i * sizeof(result) < 16; ++i) {
 				auto val = rand();
 				std::memcpy(&ret._bytes[0] + i * sizeof(result), &val, sizeof(result));
 			}
@@ -119,11 +119,11 @@ public:
 		{
 			for (int i = 0; i * sizeof(result) < 16; ++i) {
 				auto val = static_cast<result>(rand());
-				for (int j = 0; j < sizeof(result); ++j) {
+				for (size_t j = 0; j < sizeof(result); ++j) {
 					ret._bytes[i * sizeof(result) + j] = static_cast<std::byte>(val >> ((sizeof(result) - 1 - j) * 8));
 				}
 			}
-			for (int i = 0; i < 6; ++i) {
+			for (size_t i = 0; i < 6; ++i) {
 				ret._bytes[i] = static_cast<std::byte>(dur.count() >> (6 - 1 - i) * 8);
 			}
 		}
@@ -133,7 +133,7 @@ public:
 			std::memcpy(&ret._bytes[0], reinterpret_cast<std::byte*>(&count) + sizeof(count) - 6, 6);
 			auto val = rand();
 			std::memcpy(&ret._bytes[0] + 6, &val, 2);
-			for (int i = 0; i * sizeof(result) < 8; ++i) {
+			for (size_t i = 0; i * sizeof(result) < 8; ++i) {
 				val = rand();
 				std::memcpy(&ret._bytes[0] + 8 + i * sizeof(result), &val, sizeof(result));
 			}

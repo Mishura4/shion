@@ -33,8 +33,8 @@
       "hidden": true,
       "description": "Target the Windows Subsystem for Linux (WSL) or a remote Linux system with the GNU environment.",
       "cacheVariables": {
-        "CMAKE_C_COMPILER": "gcc-13",
-        "CMAKE_CXX_COMPILER": "g++-13"
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
       }
     },
     {

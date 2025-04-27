@@ -132,7 +132,7 @@ class serializer;
  * @see read
  * @see write
  */
-SHION_EXPORT template <typename T, typename Tag = void>
+SHION_EXPORT template <typename T, typename Tag>
 struct serializer_helper {
 	/**
 	 * @brief Extracts a value from a buffer and returns it in-place.
@@ -188,7 +188,7 @@ struct serializer_helper {
 SHION_EXPORT template <typename T>
 struct buffer_traits;
 
-SHION_EXPORT template <storage_buffer T>
+template <storage_buffer T>
 struct buffer_traits<T>
 {
 	constexpr static size_t capacity(const T& buffer) noexcept requires (sized_buffer<T>)
@@ -393,17 +393,17 @@ public:
 inline namespace io
 {
 
-SHION_EXPORT template <std::integral T>
+template <std::integral T>
 struct serializer_helper<T> : detail::serializer::scalar_serializer<T>
 {
 };
 
-SHION_EXPORT template <std::floating_point T>
+template <std::floating_point T>
 struct serializer_helper<T> : detail::serializer::scalar_serializer<T>
 {
 };
 
-SHION_EXPORT template <typename T>
+template <typename T>
 requires (std::is_enum_v<T>)
 struct serializer_helper<T> : detail::serializer::scalar_serializer<T>
 {
@@ -433,7 +433,7 @@ struct tuple_serializer<T, Tag, std::index_sequence<Ns...>>
 
 	constexpr auto construct(std::span<const byte>& bytes, std::endian endian = std::endian::native) -> T
 #if !SHION_INTELLISENSE
-	requires (deserialize_constructible<typename tuple_element_selector<Ns, T>::type::type> && ...)
+	requires (deserialize_constructible<typename std::tuple_element<Ns, T>::type> && ...)
 #endif
 	{
 		SHION_ASSERT(size(bytes, endian) <= static_cast<ptrdiff_t>(bytes.size()));
@@ -442,7 +442,7 @@ struct tuple_serializer<T, Tag, std::index_sequence<Ns...>>
 
 	constexpr auto size(std::span<const byte> bytes, std::endian endian = std::endian::native) -> ptrdiff_t
 #if !SHION_INTELLISENSE
-	requires (deserializable<typename tuple_element_selector<Ns, T>::type::type> && ...)
+	requires (deserializable<typename std::tuple_element<Ns, T>::type> && ...)
 #endif
 	{
 		ptrdiff_t sz = 0;
@@ -473,7 +473,7 @@ struct tuple_serializer<T, Tag, std::index_sequence<Ns...>>
 
 	constexpr auto read(std::span<const byte> bytes, T& value, std::endian endian = std::endian::native) -> ptrdiff_t
 #if !SHION_INTELLISENSE
-	requires (deserializable<typename tuple_element_selector<Ns, T>::type::type> && ...)
+	requires (deserializable<typename std::tuple_element<Ns, T>::type> && ...)
 #endif
 	{
 		SHION_ASSERT(static_cast<ptrdiff_t>(bytes.size()) >= size(bytes, endian));
@@ -489,7 +489,7 @@ struct tuple_serializer<T, Tag, std::index_sequence<Ns...>>
 
 	constexpr auto write(std::span<byte> bytes, const T& value, std::endian endian = std::endian::native) -> ptrdiff_t
 #if !SHION_INTELLISENSE
-	requires (serializable<typename tuple_element_selector<Ns, T>::type::type> && ...)
+	requires (serializable<typename std::tuple_element<Ns, T>::type> && ...)
 #endif
 	{
 		size_t sz = 0;
@@ -1026,13 +1026,13 @@ struct container_writer<T, Tag>
 inline namespace io
 {
 
-SHION_EXPORT template <typename T, typename Tag>
+template <typename T, typename Tag>
 	requires (!std::ranges::range<T> && tuple_like<T>)
 struct serializer_helper<T, Tag> : detail::serializer::tuple_serializer<T, Tag, std::make_index_sequence<tuple_size_selector<T>::type::value>>
 {
 };
 
-SHION_EXPORT template <typename T, typename Tag>
+template <typename T, typename Tag>
 	requires (std::ranges::range<T>)
 struct serializer_helper<T, Tag> : detail::serializer::container_constructor<T, Tag>, detail::serializer::container_writer<T, Tag>, detail::serializer::container_reader<T, Tag>
 {

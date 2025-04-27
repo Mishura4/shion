@@ -67,7 +67,7 @@ struct to_closure {
 	}
 };
 
-SHION_EXPORT template <template <typename...> typename Container>
+template <template <typename...> typename Container>
 struct to_closure<Container> {
 	template <typename Lhs>
 	requires (std::ranges::input_range<std::remove_cvref_t<Lhs>>)
@@ -106,7 +106,7 @@ inline constexpr T bool_to_sign(bool value) noexcept
 	return (static_cast<T>(value) * 2 - 1);
 }
 
-template <typename T>
+SHION_EXPORT template <typename T>
 class and_then {
 public:
 	template <typename U>
@@ -124,7 +124,7 @@ private:
 	T _fun;
 };
 
-template <typename T>
+SHION_EXPORT template <typename T>
 and_then(T t) -> and_then<T>;
 
 /**

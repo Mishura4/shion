@@ -22,6 +22,7 @@ module;
 #include <format>
 #include <coroutine>
 #include <iostream>
+#include <condition_variable>
 #endif
 
 export module shion:coro;
@@ -32,6 +33,8 @@ import std;
 import :common;
 import :utility;
 import :meta;
+
+using namespace SHION_NAMESPACE ::literals;
 
 #if SHION_EXTERN_MODULES
 extern "C++" {

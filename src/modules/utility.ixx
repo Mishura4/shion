@@ -28,6 +28,8 @@ module;
 #include <bit>
 #include <compare>
 
+#include <chrono> // Workaround g++ bug
+
 #endif
 
 export module shion:utility;
@@ -37,6 +39,8 @@ import std;
 #endif
 import :common;
 import :meta;
+
+using namespace SHION_NAMESPACE ::literals;
 
 #if SHION_EXTERN_MODULES
 extern "C++" {

@@ -1,6 +1,8 @@
 #ifndef SHION_TYPE_LIST_H_
 #define SHION_TYPE_LIST_H_
 
+#include "shion/export.hpp"
+
 #if !SHION_BUILDING_MODULES
 
 #include <utility>
@@ -18,10 +20,10 @@ inline constexpr bool pack_contains = false || (std::is_same_v<T, Args> || ...);
 SHION_EXPORT template <typename... Args>
 inline constexpr bool is_unique = false;
 
-SHION_EXPORT template <>
+template <>
 inline constexpr bool is_unique<> = true;
 
-SHION_EXPORT template <typename T, typename... Args>
+template <typename T, typename... Args>
 inline constexpr bool is_unique<T, Args...> = !pack_contains<T, Args...> && is_unique<Args...>;
 
 namespace detail {
@@ -65,7 +67,7 @@ public:
 	static constexpr bool is_unique = ::shion::is_unique<Args...>;
 };
 
-SHION_EXPORT template <>
+template <>
 struct type_list<> {};
 
 SHION_EXPORT template <typename T, typename... Args>

@@ -11,11 +11,13 @@ module;
 
 export module shion:meta;
 
-import :common;
-
 #if SHION_IMPORT_STD
 import std;
 #endif
+
+import :common;
+
+using namespace SHION_NAMESPACE ::literals;
 
 #include "shion/meta/type_traits.hpp"
 #include "shion/meta/type_list.hpp"

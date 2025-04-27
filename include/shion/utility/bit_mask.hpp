@@ -15,7 +15,7 @@ namespace shion {
 SHION_EXPORT template <typename T>
 struct bit_mask;
 
-SHION_EXPORT template <typename T>
+template <typename T>
 requires (std::is_enum_v<T>)
 struct bit_mask<T> {
 	constexpr bit_mask() = default;
@@ -24,6 +24,7 @@ struct bit_mask<T> {
 			value |= std::to_underlying(flag);
 		}
 	}
+
 	constexpr bit_mask(std::underlying_type_t<T> rhs) noexcept : value{rhs} {}
 	constexpr bit_mask(T rhs) noexcept : value{static_cast<std::underlying_type_t<T>>(rhs)} {}
 

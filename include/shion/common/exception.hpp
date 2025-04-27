@@ -8,6 +8,7 @@
 #    include <format>
 #    include <exception>
 #    include <string>
+#    include <utility>
 #  endif
 
 #  include <shion/common/types.hpp>
@@ -32,8 +33,8 @@ public:
 	~exception() override = default;
 
 	template <typename T, typename... Args>
-	exception(std::format_string<T, Args...> fmt, T&& arg1, Args&&... args) :
-		exception(std::format(fmt, std::forward<T>(arg1), std::forward<Args>(args)...))
+	exception(std::format_string<std::type_identity_t<T>, std::type_identity_t<Args>...> fmt, T&& arg1, Args&&... args) :
+		exception(std::vformat(fmt, std::make_format_args(std::forward<T>(arg1), std::forward<Args>(args)...)))
 	{
 	}
 
@@ -55,7 +56,7 @@ public:
 	SHION_API auto format() const -> std::string;
 
 private:
-	std::source_location _where;
+	std::source_location _where{};
 };
 
 /**

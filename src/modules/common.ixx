@@ -11,6 +11,7 @@ module;
 #  include <format>
 #  include <exception>
 #  include <string>
+#  include <functional>
 #endif
 
 #include <cstddef>

@@ -23,6 +23,8 @@ import :common;
 import :monad;
 import :utility;
 
+using namespace SHION_NAMESPACE ::literals;
+
 #include "shion/parexp/expr.hpp"
 
 using namespace shion;

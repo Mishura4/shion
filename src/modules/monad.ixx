@@ -15,6 +15,10 @@ export module shion:monad;
 import std;
 #endif
 
+import :common;
+
+using namespace SHION_NAMESPACE ::literals;
+
 #include "shion/monad/invoke.hpp"
 #include "shion/monad/compare.hpp"
 #include "shion/monad/arithmetic.hpp"

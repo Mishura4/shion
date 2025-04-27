@@ -3,13 +3,20 @@ module;
 #include <shion/export.hpp>
 #include <shion/common/detail.hpp>
 
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+
+
 #if !SHION_IMPORT_STD
 #include <limits>
 #include <type_traits>
 #include <stdexcept>
 #include <new>
 #include <utility>
-#include <cmath>
+#include <algorithm>
+
+#include <chrono> // Workaround g++ bug
 #endif
 
 export module shion:math;
@@ -20,6 +27,8 @@ import std;
 import :common;
 import :utility;
 import :meta;
+
+using namespace SHION_NAMESPACE ::literals;
 
 #if SHION_EXTERN_MODULES
 extern "C++" {

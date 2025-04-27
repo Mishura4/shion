@@ -15,7 +15,7 @@
 SHION_EXPORT namespace SHION_NAMESPACE
 {
 
-namespace aliases
+inline namespace aliases
 {
 
 using schar = signed char;
@@ -57,8 +57,6 @@ using wall_duration = wall_clock::duration;
 using ssize_t = std::ptrdiff_t;
 
 }
-
-using namespace aliases;
 
 struct wildcard {
 	wildcard() = default;

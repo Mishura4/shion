@@ -577,7 +577,7 @@ public:
 	}
 };
 
-SHION_EXPORT template <>
+template <>
 class moveable_promise<void> {
 	std::unique_ptr<basic_promise<void>> shared_state = std::make_unique<basic_promise<void>>();
 

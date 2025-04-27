@@ -3,6 +3,10 @@ module;
 #include <shion/export.hpp>
 #include <shion/common/detail.hpp>
 
+#include <cstring>
+#include <cstddef>
+#include <cstdio>
+
 #if !SHION_IMPORT_STD
 #include <tuple>
 #include <algorithm>
@@ -23,6 +27,8 @@ module;
 #include <format>
 #include <span>
 #include <bit>
+
+#include <chrono> // Workaround g++ bug
 #endif
 
 export module shion:io;
@@ -35,6 +41,8 @@ import :utility;
 import :meta;
 import :monad;
 import :coro;
+
+using namespace SHION_NAMESPACE ::literals;
 
 #if SHION_EXTERN_MODULES
 extern "C++" {

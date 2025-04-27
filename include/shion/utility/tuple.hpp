@@ -40,6 +40,8 @@ requires (std::is_default_constructible_v<T_>)
 struct _tuple_node {
 	using type = T_;
 	
+	T_ data;
+	
 	constexpr friend auto operator<=>(const _tuple_node& left, const _tuple_node &right) = default;
 	constexpr friend auto operator<=>(const _tuple_node& left, const T_ &right)
 		noexcept(noexcept(left.data <=> right))
@@ -55,8 +57,6 @@ struct _tuple_node {
 	{
 		return left.data == right;
 	}
-	
-	T_ data;
 };
 
 }
@@ -286,7 +286,7 @@ public:
 	constexpr friend bool operator==(const tuple& left, const tuple& right) = default;
 };
 
-SHION_EXPORT template <typename T, typename U>
+template <typename T, typename U>
 struct tuple<T, U> : detail::_tuple_impl<std::index_sequence<0, 1>, T, U> {
 	using my_base = detail::_tuple_impl<std::index_sequence<0, 1>, T, U>;
 	using my_base::element;
@@ -420,7 +420,7 @@ constexpr auto tie(Args &... args) noexcept -> tuple<Args&...> {
 	return tuple<Args&...>{ args... };
 }
 
-SHION_EXPORT template <size_t I, typename... Args>
+template <size_t I, typename... Args>
 requires (I <= sizeof...(Args))
 struct tuple_element<I, tuple<Args...>>
 {

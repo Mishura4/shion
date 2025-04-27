@@ -4,8 +4,11 @@ module;
 #include <source_location>
 #include <string>
 #include <utility>
+#include <type_traits>
 #include <functional>
 #include <optional>
+#include <vector>
+#include <chrono>
 
 export module shion.tests:suite;
 
@@ -79,7 +82,7 @@ inline std::optional<logger> g_logger;
 
 test_suite &make_test_suite(std::string name);
 
-struct test_failure_exception : internal_exception {
+struct test_failure_exception : shion::internal_exception {
 	using internal_exception::internal_exception;
 	using internal_exception::operator=;
 };
