@@ -4,13 +4,14 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#include <type_traits>
-#include <utility>
-#include <tuple>
-#include <compare>
+#	include <type_traits>
+#	include <utility>
+#	include <tuple>
+#	include <compare>
 
-#include <shion/shion_essentials.hpp>
-#include <shion/meta/type_list.hpp>
+#	include <shion/shion_essentials.hpp>
+#	include <shion/meta/type_list.hpp>
+#	include <shion/meta/type_traits.hpp>
 #endif
 
 namespace SHION_NAMESPACE {

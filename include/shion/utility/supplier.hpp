@@ -4,12 +4,10 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
+#	include <concepts>
+#	include <functional>
 
-#include <concepts>
-#include <functional>
-
-#include <shion/shion_essentials.hpp>
-
+#	include <shion/shion_essentials.hpp>
 #endif
 
 namespace shion

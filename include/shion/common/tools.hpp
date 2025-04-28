@@ -4,7 +4,6 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#  if !SHION_IMPORT_STD
 #    include <utility>
 #    include <functional>
 #    include <optional>
@@ -12,7 +11,6 @@
 #    include <cassert>
 #    include <ranges>
 #    include <optional>
-#  endif
 #endif
 
 namespace shion {
@@ -127,20 +125,37 @@ private:
 SHION_EXPORT template <typename T>
 and_then(T t) -> and_then<T>;
 
-/**
- * @brief In release, this returns a "default value". In debug, this calls std::unreachable.
- */
-template <typename T = void>
-T safe_unreachable() {
-#ifndef NDEBUG
-	unreachable();
-#else
-	if constexpr (!std::is_void_v<T>) {
-		return T{};
-	} else {
-		return;
+SHION_EXPORT template <typename T = void>
+struct hash
+{
+	static auto operator()(const T& v)
+	{
+		return std::hash<T>{}(v);
 	}
-#endif
+};
+
+template <>
+struct hash<void>
+{
+	using is_transparent = std::true_type;
+
+	template <typename T>
+	static auto operator()(const T& v)
+	{
+		return hash<T>{}(v);
+	}
+};
+
+SHION_EXPORT template <typename T, typename Hash = hash<>>
+size_t hash_mix(size_t a, const T& v, Hash h = {})
+{
+	return a + 0x9e3779b9 + h(v);
+}
+
+SHION_EXPORT template <typename T, typename U, typename Hash = hash<>>
+size_t hash_combine(const T& lhs, const U& rhs, Hash = {})
+{
+	return h(lhs) + 0x9e3779b9 + h(rhs);
 }
 
 }

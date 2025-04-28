@@ -5,17 +5,19 @@
 
 #if !SHION_BUILDING_MODULES
 
-#include <cstddef>
-#include <cstdint>
-#include <ranges>
-#include <algorithm>
-#include <cstring>
-#include <string>
-#include <charconv>
-#include <random>
-#include <chrono>
-#include <thread>
-#include <type_traits>
+#	include <cstddef>
+#	include <cstdint>
+#	include <cstring>
+#	include <ranges>
+#	include <algorithm>
+#	include <string>
+#	include <charconv>
+#	include <random>
+#	include <chrono>
+#	include <thread>
+#	include <type_traits>
+
+#	include <shion/common/tools.hpp>
 
 #endif
 
@@ -148,7 +150,10 @@ public:
 		if (std::is_constant_evaluated()) {
 			return generate_v4([]() constexpr -> uint64_t { return 0x7844784478447844; });
 		} else {
-			thread_local std::mt19937_64 engine{std::chrono::high_resolution_clock::now().time_since_epoch().count() ^ std::hash<std::thread::id>{}(std::this_thread::get_id())};
+			thread_local std::mt19937_64 engine{
+				std::chrono::high_resolution_clock::now().time_since_epoch().count()
+				^ std::hash<std::thread::id>{}(std::this_thread::get_id())
+			};
 
 			return generate_v4(engine);
 		}
@@ -159,7 +164,10 @@ public:
 		if (std::is_constant_evaluated()) {
 			return generate_v7([]() constexpr -> uint64_t { return 0x7844784478447844; }, {});
 		} else {
-			thread_local std::mt19937_64 engine{std::chrono::high_resolution_clock::now().time_since_epoch().count() ^ std::hash<std::thread::id>{}(std::this_thread::get_id())};
+			thread_local std::mt19937_64 engine{
+				std::chrono::high_resolution_clock::now().time_since_epoch().count()
+				^ std::hash<std::thread::id>{}(std::this_thread::get_id())
+			};
 
 			return generate_v7(engine, std::chrono::system_clock::now());
 		}
@@ -299,5 +307,14 @@ constexpr inline uuid uuid::nil = uuid::nil_uuid();
 constexpr inline uuid uuid::max = uuid::max_uuid();
 
 }
+
+template <>
+struct std::hash<SHION_NAMESPACE ::uuid>
+{
+	static auto operator()(const SHION_NAMESPACE ::uuid& id) noexcept -> std::size_t
+	{
+		return SHION_NAMESPACE ::hash_mix(id.high(), id.low());
+	}
+};
 
 #endif /* SHION_UTILITY_UUID_H_ */

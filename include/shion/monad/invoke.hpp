@@ -24,7 +24,7 @@ SHION_EXPORT struct invoke_t {
 	}
 };
 
-SHION_EXPORT constexpr auto invoke = invoke_t{};
+SHION_EXPORT inline constexpr auto invoke = invoke_t{};
 
 SHION_EXPORT template <typename T>
 struct cast_t {
@@ -37,6 +37,17 @@ struct cast_t {
 
 SHION_EXPORT template <typename T>
 inline constexpr auto cast = cast_t<T>{};
+
+SHION_EXPORT struct hash_t
+{
+	template <typename T>
+	static constexpr auto operator()(const T& v) -> size_t
+	{
+		return hash{}(v);
+	}
+};
+
+SHION_EXPORT inline constexpr auto hash = hash_t{};
 
 }
 

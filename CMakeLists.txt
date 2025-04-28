@@ -10,13 +10,13 @@ project(shion LANGUAGES CXX)
 
 option(SHION_BUILD_MODULES "Whether to build the library as a module" on)
 option(SHION_IMPORT_STD "Whether to use `import std;` when building the library modules" off)
-option(SHION_BUILD_TESTS "Whether to build the tests" ${SHION_BUILD_MODULES})
+option(SHION_BUILD_TESTS "Whether to build the tests" off)
 set(SHION_STD_MODULE_LOCATION "" CACHE STRING "Specify a custom location for the std module, or build it if empty")
 
 set(CMAKE_CXX_STANDARD 23)
 
 if (LINUX)
-	option(SHION_USE_CMAKE_IMPORT_STD "Whether to use CMake's import std feature" ${SHION_BUILD_MODULES})
+	option(SHION_USE_CMAKE_IMPORT_STD "Whether to use CMake's import std feature" off)
 	option(SHION_EXTERN_MODULES "Whether to wrap the module symbols in `extern \"C++\"` for traditional linkage" on)
 else ()
 	option(SHION_USE_CMAKE_IMPORT_STD "Whether to use CMake's import std feature" off)
@@ -43,6 +43,9 @@ endif ()
 set(SHION_STATIC_LIBRARY ${SHION_BUILD_STATIC} CACHE BOOL "Whether to build shion as a static library")
 set(SHION_MODULE_LIBRARY ${SHION_BUILD_MODULES} CACHE BOOL "Whether to build shion as a module library")
 set(SHION_SHARED_LIBRARY ${BUILD_SHARED_LIBS} CACHE BOOL "Whether to build shion as a shared library")
+
+set(SHION_STATIC_LIBRARY OFF)
+set(SHION_SHARED_LIBRARY ON)
 
 set(SHION_PRIVATE_BUILD_OPTIONS "")
 set(SHION_PUBLIC_BUILD_OPTIONS "")
@@ -83,9 +86,9 @@ set(SHION_HEADERS_DIR "${CMAKE_CURRENT_LIST_DIR}/include")
 set(SHION_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/src")
 
 file(GLOB_RECURSE SHION_HEADERS "${SHION_HEADERS_DIR}/shion/*.hpp")
-file(GLOB_RECURSE SHION_SOURCES "${SHION_SOURCE_DIR}/shion/*.hpp" "${SHION_SOURCE_DIR}/shion/*.cpp" "${SHION_HEADERS_DIR}/shion/*.cpp")
+file(GLOB_RECURSE SHION_SOURCES "${SHION_SOURCE_DIR}/shion/*.hpp" "${SHION_SOURCE_DIR}/shion/*.cpp")
 file(GLOB_RECURSE SHION_MODULE_INTERFACES "${SHION_SOURCE_DIR}/modules/*.ixx")
-file(GLOB_RECURSE SHION_MODULE_IMPLEMENTATIONS "${SHION_SOURCE_DIR}/modules/*.cxx")
+file(GLOB_RECURSE SHION_MODULE_IMPLEMENTATIONS "${SHION_SOURCE_DIR}/*.cxx")
 file(GLOB_RECURSE SHION_MODULE_PARTITIONS "${SHION_SOURCE_DIR}/modules/*.cppm")
 file(GLOB_RECURSE SHION_TESTS_SOURCES "${CMAKE_CURRENT_LIST_DIR}/src/tests/*.hpp" "${CMAKE_CURRENT_LIST_DIR}/src/tests/*.cpp")
 file(GLOB_RECURSE SHION_TEST_MODULES "${SHION_SOURCE_DIR}/tests/*.ixx")
@@ -132,6 +135,7 @@ function(create_library lib bin type)
 	target_compile_definitions(shion-${lib} PRIVATE ${SHION_PRIVATE_BUILD_DEFINITIONS} SHION_BUILD)
 	target_compile_definitions(shion-${lib} PUBLIC ${SHION_PUBLIC_BUILD_DEFINITIONS})
 	target_include_directories(shion-${lib} PUBLIC ${SHION_HEADERS_DIR})
+	target_include_directories(shion-${lib} PRIVATE ${SHION_SOURCE_DIR})
 	
 	target_sources(shion-${lib}
 		PUBLIC
@@ -148,9 +152,14 @@ function(create_library lib bin type)
 		target_sources(shion-${lib}
 			PUBLIC
 				FILE_SET CXX_MODULES FILES ${SHION_MODULE_INTERFACES} ${SHION_MODULE_PARTITIONS}
-			PRIVATE
-				${SHION_MODULE_IMPLEMENTATIONS}
 		)
+
+		if (NOT SHION_EXTERN_MODULES)
+			target_sources(shion-${lib}
+				PRIVATE
+					${SHION_MODULE_IMPLEMENTATIONS}
+			)
+		endif ()
 
 		foreach (file in ${SHION_MODULE_IMPLEMENTATIONS}})
 			set_source_files_properties(${file} PROPERTIES
@@ -160,16 +169,19 @@ function(create_library lib bin type)
 	endif ()
 	
 	add_library(shion::${lib} ALIAS shion-${lib})
+
+	if (NOT ${SHION_BUILD_MODULES} OR SHION_EXTERN_MODULES)
+		target_sources(shion-${lib}
+			PRIVATE
+				${SHION_SOURCES}
+		)
+	endif ()
 endfunction()
 
 if (SHION_SHARED_LIBRARY)
 	create_library(shared "$<IF:$<CONFIG:Debug>,shiond,shion>" SHARED)
 	
 	target_compile_definitions(shion-shared PUBLIC SHION_SHARED)
-	target_sources(shion-shared
-		PRIVATE
-			${SHION_SOURCES}
-	)
 
 	add_library(shion ALIAS shion-shared)
 endif ()
@@ -177,28 +189,10 @@ endif ()
 if (SHION_STATIC_LIBRARY)
 	create_library(static "$<IF:$<CONFIG:Debug>,libshiond,libshion>" STATIC)
 
-	target_sources(shion-static
-		PRIVATE
-			${SHION_SOURCES}
-	)
-
 	if (NOT SHION_SHARED_LIBRARY)
 		add_library(shion ALIAS shion-static)
 	endif ()
 endif ()
-
-if (SHION_MODULE_LIBRARY)
-	if (NOT SHION_BUILD_MODULES)
-		message(FATAL_ERROR "Building the module library (SHION_MODULE_LIBRARY=on) requires SHION_BUILD_MODULES=on")
-	endif ()
-	create_library(module "$<IF:$<CONFIG:Debug>,modshiond,modshion>" STATIC)
-
-	target_compile_definitions(shion-module PUBLIC SHION_MODULE_LIBRARY)
-	
-	if (NOT SHION_SHARED_LIBRARY AND NOT SHION_STATIC_LIBRARY)
-		add_library(shion ALIAS shion-module)
-	endif ()
-endif()
 
 if (SHION_BUILD_TESTS)
 	if (NOT SHION_BUILD_MODULES)

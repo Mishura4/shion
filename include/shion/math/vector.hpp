@@ -70,6 +70,26 @@ SHION_EXPORT template <typename T>
 struct vector2 {
 	SHION_DEFINE_TUPLE_ACCESS(2);
 
+	friend constexpr vector2 operator+(vector2 const& lhs, vector2 const& rhs) noexcept {
+		return { lhs.x + rhs.x, rhs.y + rhs.y };
+	}
+
+	constexpr vector2& operator+=(vector2 const& rhs) noexcept {
+		x += rhs.x;
+		y += rhs.y;
+		return *this;
+	}
+
+	friend constexpr vector2 operator-(vector2 const& lhs, vector2 const& rhs) noexcept {
+		return { lhs.x - rhs.x, rhs.y - rhs.y };
+	}
+
+	constexpr vector2& operator-=(vector2 const& rhs) noexcept {
+		x += rhs.x;
+		y += rhs.y;
+		return *this;
+	}
+
 	friend constexpr vector2 operator*(vector2 const& lhs, T factor) noexcept {
 		return {lhs.x * factor, lhs.y * factor};
 	}
@@ -115,6 +135,28 @@ struct vector2 {
 SHION_EXPORT template <typename T>
 struct vector3 {
 	SHION_DEFINE_TUPLE_ACCESS(3);
+
+	friend constexpr vector3 operator+(vector3 const& lhs, vector3 const& rhs) noexcept {
+		return { lhs.x + rhs.x, rhs.y + rhs.y, lhs.z + rhs.z };
+	}
+
+	constexpr vector3& operator+=(vector3 const& rhs) noexcept {
+		x += rhs.x;
+		y += rhs.y;
+		z += rhs.z;
+		return *this;
+	}
+
+	friend constexpr vector3 operator-(vector3 const& lhs, vector3 const& rhs) noexcept {
+		return { lhs.x - rhs.x, rhs.y - rhs.y, lhs.z - rhs.z };
+	}
+
+	constexpr vector3& operator-=(vector3 const& rhs) noexcept {
+		x -= rhs.x;
+		y -= rhs.y;
+		z -= rhs.z;
+		return *this;
+	}
 
 	friend constexpr vector3 operator*(vector3 const& lhs, T factor) noexcept {
 		return {lhs.x * factor, lhs.y * factor, lhs.z * factor};

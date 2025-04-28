@@ -28,15 +28,7 @@ import :utility;
 import :meta;
 
 using namespace SHION_NAMESPACE ::literals;
-
-#if SHION_EXTERN_MODULES
-extern "C++" {
-#endif
 	
 #include "shion/math/util.hpp"
 #include "shion/math/color.hpp"
 #include "shion/math/vector.hpp"
-
-#if SHION_EXTERN_MODULES
-}
-#endif

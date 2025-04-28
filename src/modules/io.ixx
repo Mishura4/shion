@@ -2,11 +2,10 @@ module;
 
 #include <shion/export.hpp>
 
+#if !SHION_IMPORT_STD
 #include <cstring>
 #include <cstddef>
 #include <cstdio>
-
-#if !SHION_IMPORT_STD
 #include <tuple>
 #include <algorithm>
 #include <utility>
@@ -35,6 +34,7 @@ export module shion:io;
 #if SHION_IMPORT_STD
 import std;
 #endif
+
 import :common;
 import :utility;
 import :meta;
@@ -42,19 +42,9 @@ import :monad;
 import :coro;
 
 using namespace SHION_NAMESPACE ::literals;
+using namespace std::string_view_literals;
+using namespace std::chrono_literals;
 
-#if SHION_EXTERN_MODULES
-extern "C++" {
-#endif
-
-#include "shion/io/logger.hpp"
 #include "shion/io/utils.hpp"
 #include "shion/io/serializer.hpp"
-
-#if SHION_MODULE_LIBRARY or !SHION_EXTERN_MODULES
-#include "shion/io/logger.cpp"
-#endif
-
-#if SHION_EXTERN_MODULES
-}
-#endif
+#include "shion/io/logger.hpp"

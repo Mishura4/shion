@@ -1,7 +1,7 @@
 #ifndef SHION_TYPE_LIST_H_
 #define SHION_TYPE_LIST_H_
 
-#include "shion/export.hpp"
+#include "shion/common/defines.hpp"
 
 #if !SHION_BUILDING_MODULES
 

@@ -3,13 +3,11 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#  if !SHION_IMPORT_STD
-#    include <source_location>
-#    include <format>
-#    include <exception>
-#    include <string>
-#    include <utility>
-#  endif
+#  include <source_location>
+#  include <format>
+#  include <exception>
+#  include <string>
+#  include <utility>
 
 #  include <shion/common/types.hpp>
 #endif
@@ -34,7 +32,7 @@ public:
 
 	template <typename T, typename... Args>
 	exception(std::format_string<std::type_identity_t<T>, std::type_identity_t<Args>...> fmt, T&& arg1, Args&&... args) :
-		exception(std::vformat(fmt, std::make_format_args(std::forward<T>(arg1), std::forward<Args>(args)...)))
+		exception(std::vformat(fmt.get(), std::make_format_args(std::forward<T>(arg1), std::forward<Args>(args)...)))
 	{
 	}
 
@@ -79,28 +77,5 @@ public:
 	
 	SHION_API task_cancelled_exception();
 };
-
-/**
- * @brief In release, this returns a "default value". In debug, this calls std::unreachable.
- */
-inline wildcard safe_unreachable(wildcard) {
-	return wildcard{};
-}
-
-/**
- * @brief In release, this returns a "default value". In debug, this calls std::unreachable.
- */
-template <typename T>
-decltype(auto) safe_unreachable(T&& t [[maybe_unused]]) {
-#ifndef NDEBUG
-	unreachable();
-#else
-	if constexpr (!std::is_void_v<T>) {
-		return static_cast<decltype(t)>(t);
-	} else {
-		return;
-	}
-#endif
-}
 
 }

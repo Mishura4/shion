@@ -3,11 +3,12 @@
 
 #include <shion/common/defines.hpp>
 
-#include "type_traits.hpp"
-
 #if !SHION_BUILDING_MODULES
-#  include <concepts>
-#  include <type_traits>
+#	include <concepts>
+#	include <type_traits>
+#	include <optional>
+
+#	include <shion/common/types.hpp>
 #endif
 
 namespace SHION_NAMESPACE

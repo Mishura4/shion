@@ -21,7 +21,11 @@ inline constexpr auto close_file = [](FILE* f) {
 using managed_file = shion::unique_ptr<FILE, close_file>;
 
 inline std::vector<byte> read_file(const char *path) {
-	auto f = managed_file{fopen(path, "rb")};
+#if defined(__GNUC__) && __GNUC__ < 15 && __GNUC_MINOR__ < 2
+	auto f = managed_file{ fopen(path, "rb") };
+#else
+	auto f = std::unique_ptr<FILE, decltype(close_file)> { fopen(path, "rb") };
+#endif
 
 	if (!f) {
 		return {};

@@ -4,12 +4,10 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#  if !SHION_IMPORT_STD
-#    include <concepts>
-#    include <type_traits>
-#  endif
-
-#  include <shion/common/types.hpp>
+#	include <concepts>
+#	include <type_traits>
+#	include <shion/common/assert.hpp>
+#	include <shion/common/types.hpp>
 #endif /* SHION_BUILDING_MODULES */
 
 namespace SHION_NAMESPACE

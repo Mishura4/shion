@@ -43,10 +43,6 @@ import :meta;
 
 using namespace SHION_NAMESPACE ::literals;
 
-#if SHION_EXTERN_MODULES
-extern "C++" {
-#endif
-
 #include "shion/utility/bit_mask.hpp"
 #include "shion/utility/supplier.hpp"
 #include "shion/utility/tuple.hpp"
@@ -56,7 +52,3 @@ extern "C++" {
 #include "shion/utility/unique_handle.hpp"
 #include "shion/utility/uuid.hpp"
 #include "shion/utility/bit_mask.hpp"
-
-#if SHION_EXTERN_MODULES
-}
-#endif

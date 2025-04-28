@@ -2,6 +2,8 @@ module;
 
 #include <shion/export.hpp>
 
+#include <fstream>
+
 export module shion;
 
 export import :common;

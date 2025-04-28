@@ -4,12 +4,12 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#include <algorithm>
-#include <utility>
-#include <span>
-#include <ranges>
-#include <string_view>
-#include <stdexcept>
+#	include <algorithm>
+#	include <utility>
+#	include <span>
+#	include <ranges>
+#	include <string_view>
+#	include <stdexcept>
 #endif
 
 SHION_EXPORT namespace SHION_NAMESPACE

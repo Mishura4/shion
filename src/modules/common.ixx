@@ -3,15 +3,16 @@ module;
 #include <shion/export.hpp>
 
 #if !SHION_IMPORT_STD
-#  include <chrono>
-#  include <concepts>
-#  include <type_traits>
-#  include <string_view>
-#  include <source_location>
-#  include <format>
-#  include <exception>
-#  include <string>
-#  include <functional>
+#	include <chrono>
+#	include <concepts>
+#	include <type_traits>
+#	include <string_view>
+#	include <source_location>
+#	include <format>
+#	include <exception>
+#	include <string>
+#	include <functional>
+#	include <fstream>
 #endif
 
 #include <cstddef>
@@ -24,11 +25,8 @@ export module shion:common;
 import std;
 #endif
 
-#if SHION_EXTERN_MODULES
-extern "C++" {
-#endif
-
 #include "shion/common/defines.hpp"
+#include "shion/common/assert.hpp"
 #include "shion/common/detail.hpp"
 #include "shion/common/types.hpp"
 #include "shion/common/cast.hpp"
@@ -36,15 +34,4 @@ extern "C++" {
 #include "shion/common/exception.hpp"
 #include "shion/common/tools.hpp"
 	
-#if SHION_EXTERN_MODULES
-}
-	
-#if SHION_EXTERN_MODULES
-extern "C++" {
-#endif
-#if SHION_MODULE_LIBRARY or !SHION_EXTERN_MODULES
-#include "shion/common/exception.cpp"
-#endif
-}
-
-#endif
+// #include "shion/common/exception.cpp"

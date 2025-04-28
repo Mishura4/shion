@@ -4,14 +4,12 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#  if !SHION_IMPORT_STD
-#    include <string_view>
-#    include <chrono>
-#  endif
+#	include <string_view>
+#	include <chrono>
 
-#  include <shion/common/types.hpp>
-#  include <shion/common/cast.hpp>
-#  include <shion/common/assert.hpp>
+#	include <shion/common/types.hpp>
+#	include <shion/common/cast.hpp>
+#	include <shion/common/assert.hpp>
 #endif
 
 SHION_EXPORT namespace SHION_NAMESPACE

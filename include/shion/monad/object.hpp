@@ -20,7 +20,7 @@ SHION_EXPORT namespace monad
  * Meant to be passed to standard library functions like std::ranges::transform.
  */
 template <typename T>
-constexpr auto construct = []<typename... Ts>(Ts&&... args) constexpr noexcept(std::is_nothrow_constructible_v<T, Ts...>) -> T requires (std::is_constructible_v<T, Ts...>) {
+inline constexpr auto construct = []<typename... Ts>(Ts&&... args) constexpr noexcept(std::is_nothrow_constructible_v<T, Ts...>) -> T requires (std::is_constructible_v<T, Ts...>) {
 	return T(std::forward<Ts>(args)...);
 };
 
@@ -29,7 +29,7 @@ constexpr auto construct = []<typename... Ts>(Ts&&... args) constexpr noexcept(s
  *
  * Meant to be passed to standard library functions like std::ranges::transform.
  */
-constexpr auto address_of = [](auto&& value) constexpr noexcept {
+inline constexpr auto address_of = [](auto&& value) constexpr noexcept {
 	return &value;
 };
 

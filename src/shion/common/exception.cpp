@@ -1,13 +1,9 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#	if SHION_IMPORT_STD
-		import std;
-#	else
-#		include <format>
-#		include <functional>
-#		include <source_location>
-#	endif /* SHION_IMPORT_STD */
+#	include <format>
+#	include <functional>
+#	include <source_location>
 
 #	include <shion/common/exception.hpp>
 #endif

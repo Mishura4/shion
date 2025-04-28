@@ -2,12 +2,15 @@
 #define SHION_EXPORT_H_
 
 #define SHION_BUILDING_MODULES 1
-#define SHION_EXPORT export
-#define SHION_EXPORT_START export {
-#define SHION_EXPORT_END }
 
-#ifndef SHION_EXTERN_MODULES
-#  define SHION_EXTERN_MODULES 0
+#if defined(SHION_EXTERN_MODULES) and SHION_EXTERN_MODULES
+#	define SHION_EXPORT export extern "C++"
+#	define SHION_EXPORT_START export extern "C++" {
+#	define SHION_EXPORT_END }
+#else
+#	define SHION_EXPORT export
+#	define SHION_EXPORT_START export {
+#	define SHION_EXPORT_END }
 #endif
 
 // Include all macros and other things we need here, we are in the global module fragment

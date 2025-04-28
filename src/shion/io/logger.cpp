@@ -1,13 +1,9 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#  if SHION_IMPORT_STD
-    import std;
-#  endif
-
-#  include <shion/io/logger.hpp>
-#  include <shion/common/tools.hpp>
-#  include <shion/common/exception.hpp>
+#	include <shion/io/logger.hpp>
+#	include <shion/common/tools.hpp>
+#	include <shion/common/exception.hpp>
 #endif
 
 namespace shion {

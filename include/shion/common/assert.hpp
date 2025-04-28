@@ -1,29 +1,28 @@
 #ifndef SHION_COMMON_ASSERT_H_
 #define SHION_COMMON_ASSERT_H_
 
-#include <type_traits>
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#  include <cassert>
+#	include <type_traits>
+#	include <cassert>
 #endif
 
-namespace SHION_NAMESPACE
+SHION_EXPORT namespace SHION_NAMESPACE
 {
 
-[[noreturn]] inline void unreachable() {
+[[noreturn]] inline void unreachable()
+{
 #ifdef _MSC_VER
 	__assume(false);
-#else
+#elifdef __clang__
 	__builtin_unreachable();
+#elifdef __GNUC__
+	__builtin_unreachable();
+#else
+	std::abort();
 #endif
 }
-
-#ifndef NDEBUG
-#  define SHION_ASSERT(a) assert(a)
-#else
-#  define SHION_ASSERT(a) do { if (!(a)) SHION_NAMESPACE ::unreachable(); } while(false)
-#endif
 
 }
 

@@ -5,14 +5,12 @@
 
 #if !SHION_BUILDING_MODULES
 
-#if !SHION_IMPORT_STD
 #include <functional>
 #include <type_traits>
 #include <concepts>
 #include <utility>
 #include <array>
 #include <functional>
-#endif
 
 #include <shion/utility/supplier.hpp>
 #include <shion/monad/invoke.hpp>
