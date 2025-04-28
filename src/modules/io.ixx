@@ -1,7 +1,6 @@
 module;
 
 #include <shion/export.hpp>
-#include <shion/common/detail.hpp>
 
 #include <cstring>
 #include <cstddef>

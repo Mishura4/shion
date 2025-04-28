@@ -29,6 +29,7 @@ extern "C++" {
 #endif
 
 #include "shion/common/defines.hpp"
+#include "shion/common/detail.hpp"
 #include "shion/common/types.hpp"
 #include "shion/common/cast.hpp"
 #include "shion/common/literals.hpp"

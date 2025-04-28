@@ -3,9 +3,11 @@
 
 #include <shion/common/defines.hpp>
 
+#if !SHION_BUILDING_MODULES
 #include <type_traits>
 #include <concepts>
 #include <functional>
+#endif
 
 namespace SHION_NAMESPACE
 {

@@ -176,6 +176,8 @@ struct not_trivially_constructible {
 enum class enum_class {};
 enum enum_test {};
 
+struct incomplete;
+
 }
 
 // Taken from https://github.com/llvm/llvm-project/pull/101807/files
@@ -201,6 +203,10 @@ static_assert(!is_implicit_lifetime_v<int()>);
 static_assert(is_implicit_lifetime_v<int(*)()>);
 static_assert(is_implicit_lifetime_v<int detail::user_declared_destructor::*>);
 static_assert(is_implicit_lifetime_v<int (detail::user_declared_destructor::*)()>);
+  //static_assert(!is_implicit_lifetime_v<detail::incomplete>);
+  // expected-error@-1 {{incomplete type 'IncompleteStruct' used in type trait expression}}
+  static_assert(is_implicit_lifetime_v<detail::incomplete[]>);
+  static_assert(is_implicit_lifetime_v<detail::incomplete[5]>);
 // Good enough?
 
 SHION_EXPORT_START

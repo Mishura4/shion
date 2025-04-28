@@ -2,8 +2,6 @@ module;
 
 #include <shion/export.hpp>
 
-#include <shion/common/detail.hpp>
-
 #if !SHION_IMPORT_STD
 
 #include <algorithm>
@@ -27,6 +25,9 @@ module;
 #include <thread>
 #include <bit>
 #include <compare>
+#include <type_traits>
+#include <concepts>
+#include <functional>
 
 #include <chrono> // Workaround g++ bug
 

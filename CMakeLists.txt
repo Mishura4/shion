@@ -84,7 +84,9 @@ set(SHION_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/src")
 
 file(GLOB_RECURSE SHION_HEADERS "${SHION_HEADERS_DIR}/shion/*.hpp")
 file(GLOB_RECURSE SHION_SOURCES "${SHION_SOURCE_DIR}/shion/*.hpp" "${SHION_SOURCE_DIR}/shion/*.cpp" "${SHION_HEADERS_DIR}/shion/*.cpp")
-file(GLOB_RECURSE SHION_MODULES "${SHION_SOURCE_DIR}/modules/*.ixx" "${SHION_SOURCE_DIR}/modules/*.cpp")
+file(GLOB_RECURSE SHION_MODULE_INTERFACES "${SHION_SOURCE_DIR}/modules/*.ixx")
+file(GLOB_RECURSE SHION_MODULE_IMPLEMENTATIONS "${SHION_SOURCE_DIR}/modules/*.cxx")
+file(GLOB_RECURSE SHION_MODULE_PARTITIONS "${SHION_SOURCE_DIR}/modules/*.cppm")
 file(GLOB_RECURSE SHION_TESTS_SOURCES "${CMAKE_CURRENT_LIST_DIR}/src/tests/*.hpp" "${CMAKE_CURRENT_LIST_DIR}/src/tests/*.cpp")
 file(GLOB_RECURSE SHION_TEST_MODULES "${SHION_SOURCE_DIR}/tests/*.ixx")
 
@@ -145,8 +147,16 @@ function(create_library lib bin type)
 		target_compile_definitions(shion-${lib} PUBLIC SHION_MODULES)
 		target_sources(shion-${lib}
 			PUBLIC
-				FILE_SET CXX_MODULES FILES "${SHION_MODULES}"
+				FILE_SET CXX_MODULES FILES ${SHION_MODULE_INTERFACES} ${SHION_MODULE_PARTITIONS}
+			PRIVATE
+				${SHION_MODULE_IMPLEMENTATIONS}
 		)
+
+		foreach (file in ${SHION_MODULE_IMPLEMENTATIONS}})
+			set_source_files_properties(${file} PROPERTIES
+				CMAKE_CXX_SCAN_FOR_MODULES ON
+			)
+		endforeach ()
 	endif ()
 	
 	add_library(shion::${lib} ALIAS shion-${lib})
