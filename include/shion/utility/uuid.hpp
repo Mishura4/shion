@@ -16,6 +16,7 @@
 #	include <chrono>
 #	include <thread>
 #	include <type_traits>
+#	include <bit>
 
 #	include <shion/common/tools.hpp>
 

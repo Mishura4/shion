@@ -11,7 +11,12 @@ module;
 #include <memory>
 #include <utility>
 #include <format>
+#include <chrono>
 
 module shion;
+
+using namespace SHION_NAMESPACE ::literals;
+using namespace std::string_view_literals;
+using namespace std::chrono_literals;
 
 #include "logger.cpp"

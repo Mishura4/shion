@@ -34,13 +34,5 @@ import :utility;
 import :meta;
 
 using namespace SHION_NAMESPACE ::literals;
-
-#if SHION_EXTERN_MODULES
-extern "C++" {
-#endif
 	
 #include "shion/coro.hpp"
-
-#if SHION_EXTERN_MODULES
-}
-#endif

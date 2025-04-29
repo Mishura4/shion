@@ -28,6 +28,7 @@ module;
 #include <type_traits>
 #include <concepts>
 #include <functional>
+#include <bit>
 
 #include <chrono> // Workaround g++ bug
 

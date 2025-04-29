@@ -10,9 +10,10 @@ project(shion LANGUAGES CXX)
 
 option(SHION_BUILD_MODULES "Whether to build the library as a module" on)
 option(SHION_IMPORT_STD "Whether to use `import std;` when building the library modules" off)
-option(SHION_BUILD_TESTS "Whether to build the tests" off)
+option(SHION_BUILD_TESTS "Whether to build the tests" on)
 set(SHION_STD_MODULE_LOCATION "" CACHE STRING "Specify a custom location for the std module, or build it if empty")
 
+set(SHION_BUILD_TESTS off)
 set(CMAKE_CXX_STANDARD 23)
 
 if (LINUX)
@@ -44,8 +45,8 @@ set(SHION_STATIC_LIBRARY ${SHION_BUILD_STATIC} CACHE BOOL "Whether to build shio
 set(SHION_MODULE_LIBRARY ${SHION_BUILD_MODULES} CACHE BOOL "Whether to build shion as a module library")
 set(SHION_SHARED_LIBRARY ${BUILD_SHARED_LIBS} CACHE BOOL "Whether to build shion as a shared library")
 
-set(SHION_STATIC_LIBRARY OFF)
-set(SHION_SHARED_LIBRARY ON)
+set(SHION_SHARED_LIBRARY on)
+set(SHION_STATIC_LIBRARY on)
 
 set(SHION_PRIVATE_BUILD_OPTIONS "")
 set(SHION_PUBLIC_BUILD_OPTIONS "")
@@ -82,14 +83,15 @@ if (UNIX OR CLANG_CL)
 	set(SHION_PRIVATE_BUILD_OPTIONS ${SHION_PRIVATE_BUILD_OPTIONS} "-Wno-unknown-attributes" "-Wno-c++98-compat")
 endif ()
 
-set(SHION_HEADERS_DIR "${CMAKE_CURRENT_LIST_DIR}/include")
+
+set(SHION_HEADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(SHION_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/src")
 
 file(GLOB_RECURSE SHION_HEADERS "${SHION_HEADERS_DIR}/shion/*.hpp")
 file(GLOB_RECURSE SHION_SOURCES "${SHION_SOURCE_DIR}/shion/*.hpp" "${SHION_SOURCE_DIR}/shion/*.cpp")
-file(GLOB_RECURSE SHION_MODULE_INTERFACES "${SHION_SOURCE_DIR}/modules/*.ixx")
-file(GLOB_RECURSE SHION_MODULE_IMPLEMENTATIONS "${SHION_SOURCE_DIR}/*.cxx")
-file(GLOB_RECURSE SHION_MODULE_PARTITIONS "${SHION_SOURCE_DIR}/modules/*.cppm")
+file(GLOB_RECURSE SHION_MODULE_INTERFACES "${SHION_HEADERS_DIR}/shion/*.ixx")
+file(GLOB_RECURSE SHION_MODULE_PARTITIONS "${SHION_HEADERS_DIR}/shion/*.cppm")
+file(GLOB_RECURSE SHION_MODULE_IMPLEMENTATIONS "${SHION_SOURCE_DIR}/shion/*.cxx")
 file(GLOB_RECURSE SHION_TESTS_SOURCES "${CMAKE_CURRENT_LIST_DIR}/src/tests/*.hpp" "${CMAKE_CURRENT_LIST_DIR}/src/tests/*.cpp")
 file(GLOB_RECURSE SHION_TEST_MODULES "${SHION_SOURCE_DIR}/tests/*.ixx")
 
@@ -125,6 +127,16 @@ if (SHION_IMPORT_STD)
 		set(CMAKE_CXX_MODULE_STD 1)
 	endif ()
 endif ()
+	
+if (NOT DEFINED CMAKE_INSTALL_BINDIR)
+	set(CMAKE_INSTALL_BINDIR bin/)
+endif ()
+if (NOT DEFINED CMAKE_INSTALL_INCLUDEDIR)
+	set(CMAKE_INSTALL_INCLUDEDIR include/)
+endif ()
+if (NOT DEFINED CMAKE_INSTALL_LIBDIR)
+	set(CMAKE_INSTALL_LIBDIR lib/)
+endif ()
 
 function(create_library lib bin type)
 	add_library(shion-${lib} ${type})
@@ -134,12 +146,17 @@ function(create_library lib bin type)
 	target_compile_options(shion-${lib} PUBLIC ${SHION_PUBLIC_BUILD_OPTIONS})
 	target_compile_definitions(shion-${lib} PRIVATE ${SHION_PRIVATE_BUILD_DEFINITIONS} SHION_BUILD)
 	target_compile_definitions(shion-${lib} PUBLIC ${SHION_PUBLIC_BUILD_DEFINITIONS})
-	target_include_directories(shion-${lib} PUBLIC ${SHION_HEADERS_DIR})
+	target_include_directories(shion-${lib}
+		PUBLIC
+			"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+			"$<INSTALL_INTERFACE:include>"
+	)
 	target_include_directories(shion-${lib} PRIVATE ${SHION_SOURCE_DIR})
 	
 	target_sources(shion-${lib}
-		PUBLIC
-			${SHION_HEADERS}
+		PUBLIC FILE_SET HEADERS
+			BASE_DIRS ${SHION_HEADERS_DIR}
+			FILES ${SHION_HEADERS}
 	)
 	if (NOT SHION_STD_MODULE_LOCATION STREQUAL "")
 		target_compile_options(shion-${lib} PRIVATE "/reference \"${SHION_STD_MODULE_LOCATION}\"")
@@ -150,8 +167,9 @@ function(create_library lib bin type)
 	if (SHION_BUILD_MODULES)
 		target_compile_definitions(shion-${lib} PUBLIC SHION_MODULES)
 		target_sources(shion-${lib}
-			PUBLIC
-				FILE_SET CXX_MODULES FILES ${SHION_MODULE_INTERFACES} ${SHION_MODULE_PARTITIONS}
+			PUBLIC FILE_SET CXX_MODULES
+				BASE_DIRS ${SHION_HEADERS_DIR}
+				FILES ${SHION_MODULE_INTERFACES} ${SHION_MODULE_PARTITIONS}
 		)
 
 		if (NOT SHION_EXTERN_MODULES)
@@ -167,32 +185,51 @@ function(create_library lib bin type)
 			)
 		endforeach ()
 	endif ()
-	
-	add_library(shion::${lib} ALIAS shion-${lib})
 
-	if (NOT ${SHION_BUILD_MODULES} OR SHION_EXTERN_MODULES)
+	if (NOT ${SHION_BUILD_MODULES} OR NOT WIN32 OR SHION_EXTERN_MODULES)
+		# Build traditional sources if we are
+		# - Not using modules, or
+		# - Not on windows and using external linkage for modules, or
+		# - On windows and NOT using external linkage for modules
 		target_sources(shion-${lib}
 			PRIVATE
 				${SHION_SOURCES}
 		)
 	endif ()
+
+	install(TARGETS shion-${lib}
+		EXPORT shion-${lib}
+		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+		INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+		FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+		FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+	)
+
+	install(EXPORT shion-${lib}
+		DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/shion
+		NAMESPACE shion::
+		CXX_MODULES_DIRECTORY modules
+	)
 endfunction()
+
+if (SHION_STATIC_LIBRARY)
+	create_library(static "$<IF:$<CONFIG:Debug>,libshiond,libshion>" STATIC)
+	
+
+	set(SHION_DEFAULT_LIB shion-static)
+endif ()
 
 if (SHION_SHARED_LIBRARY)
 	create_library(shared "$<IF:$<CONFIG:Debug>,shiond,shion>" SHARED)
 	
 	target_compile_definitions(shion-shared PUBLIC SHION_SHARED)
 
-	add_library(shion ALIAS shion-shared)
+	set(SHION_DEFAULT_LIB shion-shared)
 endif ()
 
-if (SHION_STATIC_LIBRARY)
-	create_library(static "$<IF:$<CONFIG:Debug>,libshiond,libshion>" STATIC)
-
-	if (NOT SHION_SHARED_LIBRARY)
-		add_library(shion ALIAS shion-static)
-	endif ()
-endif ()
+add_library(shion::shion ALIAS ${SHION_DEFAULT_LIB})
 
 if (SHION_BUILD_TESTS)
 	if (NOT SHION_BUILD_MODULES)

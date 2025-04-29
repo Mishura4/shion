@@ -1,6 +1,8 @@
-#include <shion/concurrency/worker.hpp>
+/*#include <shion/concurrency/worker.hpp>
 
-namespace shion::concurrency {
+namespace shion::concurrency
+{
+
 auto concurrent_work_queue::pop() -> work {
 	static detail::work_data dummy;
 	detail::work_data*       expected;
@@ -64,3 +66,4 @@ shion::awaitable<void> worker::stop() {
 
 
 }
+*/

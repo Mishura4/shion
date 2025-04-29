@@ -8,7 +8,7 @@
 #include <utility>
 #include <type_traits>
 
-#include "../shion_essentials.hpp"
+#include <shion/common/types.hpp>
 
 #endif
 

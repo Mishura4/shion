@@ -8,6 +8,7 @@
 #	include <utility>
 #	include <tuple>
 #	include <compare>
+#	include <functional>
 
 #	include <shion/shion_essentials.hpp>
 #	include <shion/meta/type_list.hpp>
