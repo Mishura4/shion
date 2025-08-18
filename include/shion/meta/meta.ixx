@@ -1,6 +1,7 @@
 module;
 
 #include <shion/export.hpp>
+#include <shion/common/defines.hpp>
 
 #if !SHION_IMPORT_STD
 #  include <concepts>

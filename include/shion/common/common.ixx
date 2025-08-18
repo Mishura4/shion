@@ -13,6 +13,7 @@ module;
 #	include <string>
 #	include <functional>
 #	include <fstream>
+#	include <atomic>
 #endif
 
 #include <cstddef>
@@ -33,5 +34,3 @@ import std;
 #include "shion/common/literals.hpp"
 #include "shion/common/exception.hpp"
 #include "shion/common/tools.hpp"
-	
-// #include "shion/common/exception.cpp"

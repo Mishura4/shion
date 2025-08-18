@@ -9,6 +9,8 @@
 #include <utility>
 #include <type_traits>
 #include <cmath>
+
+#include <shion/common/assert.hpp>
 #endif
 
 namespace SHION_NAMESPACE {

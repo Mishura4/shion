@@ -1,8 +1,8 @@
-#include <shion/common/defines.hpp>
+/*#include <shion/common/defines.hpp>
 
-#if !SHION_BUILDING_MODULES
-#include <shion/worker.hpp>
-#endif
+import shion;
+
+import std;
 
 namespace shion {
 
@@ -39,3 +39,4 @@ shion::awaitable<void> worker::stop() {
 
 
 }
+*/

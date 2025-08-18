@@ -8,7 +8,7 @@
 #include <shion/common.hpp>
 #endif
 
-namespace shion {
+SHION_EXPORT namespace shion {
 
 struct frgb {
 	float r;
@@ -20,16 +20,21 @@ struct frgb {
 	static const frgb green;
 };
 
-inline constexpr frgb frgb::red = {1.0f, 0.0f, 0.0f};
-inline constexpr frgb frgb::blue = {0.0f, 1.0f, 0.0f};
-inline constexpr frgb frgb::green = {0.0f, 0.0f, 1.0f};
-
 struct frgba {
 	float r;
 	float g;
 	float b;
 	float a;
 };
+
+}
+
+namespace SHION_NAMESPACE
+{
+
+inline constexpr frgb frgb::red = {1.0f, 0.0f, 0.0f};
+inline constexpr frgb frgb::blue = {0.0f, 1.0f, 0.0f};
+inline constexpr frgb frgb::green = {0.0f, 0.0f, 1.0f};
 
 }
 

@@ -1,14 +1,13 @@
 module;
 
 #include <shion/export.hpp>
+#include <shion/common/defines.hpp>
 
 #if !SHION_IMPORT_STD
-
 #include <functional>
 #include <utility>
 #include <type_traits>
 #include <concepts>
-
 #endif
 
 export module shion:monad;

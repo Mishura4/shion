@@ -1,16 +1,15 @@
 module;
 
 #include <shion/export.hpp>
+#include <shion/common/defines.hpp>
 
 #if !SHION_IMPORT_STD
-
 #include <functional>
 #include <type_traits>
 #include <concepts>
 #include <utility>
 #include <array>
 #include <functional>
-
 #endif
 
 export module shion:parexp;

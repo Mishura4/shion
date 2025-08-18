@@ -1,6 +1,7 @@
 module;
 
 #include <shion/export.hpp>
+#include <shion/common/defines.hpp>
 
 #if !SHION_IMPORT_STD
 #include <algorithm>
@@ -21,6 +22,7 @@ module;
 #include <format>
 #include <unordered_set>
 #include <unordered_map>
+#include <source_location>
 #endif
 
 export module shion:containers;

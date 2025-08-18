@@ -258,12 +258,12 @@ public:
 		}
 	}
 
-	std::uint64_t high() const noexcept
+	SHION_API std::uint64_t high() const noexcept
 	{
 		return std::launder(reinterpret_cast<std::uint64_t const(*)>(&_bytes[0]))[0];
 	}
 
-	std::uint64_t low() const noexcept
+	SHION_API std::uint64_t low() const noexcept
 	{
 		return std::launder(reinterpret_cast<std::uint64_t const(*)>(&_bytes[0]))[1];
 	}
@@ -312,7 +312,7 @@ constexpr inline uuid uuid::max = uuid::max_uuid();
 template <>
 struct std::hash<SHION_NAMESPACE ::uuid>
 {
-	static auto operator()(const SHION_NAMESPACE ::uuid& id) noexcept -> std::size_t
+	static SHION_API auto operator()(const SHION_NAMESPACE ::uuid& id) noexcept -> std::size_t
 	{
 		return SHION_NAMESPACE ::hash_mix(id.high(), id.low());
 	}

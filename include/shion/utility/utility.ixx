@@ -1,9 +1,9 @@
 module;
 
 #include <shion/export.hpp>
+#include <shion/common/defines.hpp>
 
 #if !SHION_IMPORT_STD
-
 #include <algorithm>
 #include <tuple>
 #include <utility>
@@ -29,9 +29,8 @@ module;
 #include <concepts>
 #include <functional>
 #include <bit>
-
+#include <source_location>
 #include <chrono> // Workaround g++ bug
-
 #endif
 
 export module shion:utility;

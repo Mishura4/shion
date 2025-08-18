@@ -63,6 +63,7 @@
 #	define SHION_EXPORT
 #	define SHION_EXPORT_START
 #	define SHION_EXPORT_END
+#	define SHION_EXPORT_MODULE
 #endif /* SHION_EXPORT */
 
 #ifndef SHION_DEBUG
@@ -138,10 +139,40 @@
 #	define SHION_HAS_PFR 0
 #endif
 
+#	define SHION_SRCLOC std::source_location::current()
+
 #ifndef NDEBUG
-#	define SHION_ASSERT(a) assert(a)
+#	define SHION_ASSERT_1(x) \
+	if (!(x)) \
+	{ \
+		SHION_NAMESPACE ::g_assert_handler.load()(#x, SHION_SRCLOC); \
+		std::abort(); \
+	} \
+	static_assert(true)
+#	define SHION_ASSERT_2(x, msg) \
+	if (!(x)) \
+	{ \
+		SHION_NAMESPACE ::g_assert_handler.load()("\"" #x "\": " msg, SHION_SRCLOC); \
+		std::abort(); \
+	} \
+	static_assert(true)
+#	define SHION_ASSERT_3(x, fmt, ...) \
+	if (!(x)) \
+	{ \
+		SHION_NAMESPACE ::g_assert_handler.load()("\"" #x "\": " + std::format(fmt, __VA_ARGS__), SHION_SRCLOC); \
+		std::abort(); \
+	} \
+	static_assert(true)
+
+#	define SHION_ASSERT_IMPL2(A, B, C, D, ...) D
+#	define SHION_ASSERT_IMPL1(...) \
+	SHION_ASSERT_IMPL2(__VA_ARGS__, SHION_ASSERT_3, SHION_ASSERT_2, SHION_ASSERT_1)(__VA_ARGS__)
+
+#	define SHION_ASSERT(condition, ...) \
+	SHION_ASSERT_IMPL1(condition __VA_OPT__(,) __VA_ARGS__)
 #else
-#	define SHION_ASSERT(a) do { if (!(a)) SHION_NAMESPACE ::unreachable(); } while(false)
+#	define SHION_ASSERT(a) if (!(a)) SHION_NAMESPACE ::unreachable(); static_assert(true)
 #endif
+
 
 #endif /* SHION_BASE_H_ */

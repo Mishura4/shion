@@ -104,7 +104,7 @@ constexpr bool serializer_helper_array(test* t)
 	array str_in{};
 	array str_out{};
 	shion::serializer_helper<array> test;
-	ptrdiff_t expected_size = str_in.size();
+	std::ptrdiff_t expected_size = str_in.size();
 	std::ranges::copy("hello world!", str_in.begin());
 	
 	TEST_ASSERT(*t, test.write({}, str_in) == expected_size);
@@ -123,7 +123,7 @@ constexpr bool serializer_helper_ranges_string(test* t)
 	std::string                    str_in("hey");
 	std::string                    str_out{};
 	shion::serializer_helper<std::string> test;
-	ptrdiff_t expected_size = (1 + str_in.size() * sizeof(std::string::value_type));
+	std::ptrdiff_t expected_size = (1 + str_in.size() * sizeof(std::string::value_type));
 	
 	TEST_ASSERT(*t, test.write({}, str_in) == expected_size);
 	TEST_ASSERT(*t, test.write(big, str_in) == expected_size);
@@ -137,7 +137,7 @@ constexpr bool serializer_helper_ranges_string(test* t)
 
 constexpr bool serializer_helper_ranges_big_string(test* t)
 {
-	auto do_test = [&](ptrdiff_t bytes, ptrdiff_t expected_size_bytes)
+	auto do_test = [&](std::ptrdiff_t bytes, std::ptrdiff_t expected_size_bytes)
 	{
 		std::vector<std::byte> big(bytes + expected_size_bytes);
 		std::string            bigstr_in{};
@@ -146,7 +146,7 @@ constexpr bool serializer_helper_ranges_big_string(test* t)
 		bigstr_in.resize(bytes);
 		std::ranges::fill_n(std::begin(bigstr_in), bigstr_in.size(), 'a');
 		shion::serializer_helper<std::string> test;
-		ptrdiff_t expected_size = (expected_size_bytes + bigstr_in.size() * sizeof(std::string::value_type));
+		std::ptrdiff_t expected_size = (expected_size_bytes + bigstr_in.size() * sizeof(std::string::value_type));
 	
 		TEST_ASSERT(*t, test.write({}, bigstr_in) == expected_size);
 		TEST_ASSERT(*t, test.write(big, bigstr_in) == expected_size);
@@ -176,7 +176,7 @@ constexpr bool serializer_helper_ranges_vector_string(test* t)
 	vec                    vec_in({ "hello", " ", "world", "!"});
 	vec                    vec_out;
 	serializer_helper<vec> test;
-	ptrdiff_t expected_size = (1 + (1 * 4) + vec_in[0].size() + vec_in[1].size() + vec_in[2].size() + vec_in[3].size());
+	std::ptrdiff_t expected_size = (1 + (1 * 4) + vec_in[0].size() + vec_in[1].size() + vec_in[2].size() + vec_in[3].size());
 	
 	TEST_ASSERT(*t, test.write({}, vec_in) == expected_size);
 	TEST_ASSERT(*t, test.write(big, vec_in) == expected_size);
@@ -227,7 +227,7 @@ bool serializer_helper_ranges_list(test* t)
 	std::list<int>                 list_in{ 1, 2, 4, 8 };
 	std::list<int>                 list_out{};
 	shion::serializer_helper<std::list<int>> test;
-	ptrdiff_t expected_size = (1 + list_in.size() * sizeof(int));
+	std::ptrdiff_t expected_size = (1 + list_in.size() * sizeof(int));
 	
 	TEST_ASSERT(*t, test.write({}, list_in) == expected_size);
 	TEST_ASSERT(*t, test.write(big, list_in) == expected_size);
@@ -245,7 +245,7 @@ bool serializer_helper_ranges_deque(test* t)
 	std::deque<int>                 list_in{ 1, 2, 4, 8 };
 	std::deque<int>                 list_out{};
 	shion::serializer_helper<std::deque<int>> test;
-	ptrdiff_t expected_size = (1 + list_in.size() * sizeof(int));
+	std::ptrdiff_t expected_size = (1 + list_in.size() * sizeof(int));
 	
 	TEST_ASSERT(*t, test.write({}, list_in) == expected_size);
 	TEST_ASSERT(*t, test.write(big, list_in) == expected_size);
@@ -266,7 +266,7 @@ bool serializer_helper_ranges_umap(test* t)
 	};
 	umap                 list_out{};
 	shion::serializer_helper<umap> test;
-	ptrdiff_t expected_size = (
+	std::ptrdiff_t expected_size = (
 		1 + list_in.size() * sizeof(int)
 		+ std::ranges::fold_left(list_in | std::views::keys, size_t{0}, [](size_t sz, const std::string& value) {
 			return sz + serializer_helper<std::string>().write({}, value);

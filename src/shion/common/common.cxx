@@ -1,11 +1,25 @@
 module;
 
 #include <shion/export.hpp>
+#include <shion/common/defines.hpp>
 
-#include <format>
-#include <functional>
-#include <source_location>
+#if !SHION_IMPORT_STD
+#include <cstdlib>
+#include <filesystem>
+#include <iostream>
+#include <syncstream>
+
+#if _WIN32
+#include <Windows.h>
+#endif
+
+#endif
 
 module shion;
 
+#if SHION_IMPORT_STD
+import std;
+#endif
+
 #include "exception.cpp"
+#include "assert.cpp"
