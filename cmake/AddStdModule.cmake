@@ -52,6 +52,10 @@ function(AddStdModule NAME)
 		
 		cmake_path(ABSOLUTE_PATH ModuleSystemPath BASE_DIRECTORY ${ModuleSystemDir} NORMALIZE)
 
+		if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+			target_compile_options(${NAME} PRIVATE "-Wno-reserved-module-identifier")
+		endif ()
+
 		target_include_directories(${NAME} SYSTEM PRIVATE ${ModuleSystemInclude})
 	endif ()
 

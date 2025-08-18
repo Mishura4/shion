@@ -35,7 +35,7 @@
 
 // ------------- Internals -------------
 #if SHION_SHARED
-#	if _WIN32
+#	if defined(_WIN32) && _WIN32
 #		if SHION_BUILD
 #			define SHION_API __declspec(dllexport)
 #		else
@@ -122,7 +122,7 @@
 #	define SHION_INTELLISENSE 0
 #endif
 
-#if _MSC_VER
+#if defined(_MSC_VER) && _MSC_VER
 #	define SHION_CPPVER _MSVC_LANG
 #else
 #	define SHION_CPPVER __cplusplus
@@ -173,6 +173,7 @@
 #else
 #	define SHION_ASSERT(a) if (!(a)) SHION_NAMESPACE ::unreachable(); static_assert(true)
 #endif
+
 
 
 #endif /* SHION_BASE_H_ */
