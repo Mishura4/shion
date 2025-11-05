@@ -88,6 +88,7 @@ void assert_failure_handler::operator()(
 )
 {
 	(*g_assert_handler)(std::format("Assertion '{}' failed: {}", condition, msg), where);
+	std::abort();
 }
 
 void assert_failure_handler::operator()(
@@ -95,6 +96,7 @@ void assert_failure_handler::operator()(
 )
 {
 	(*g_assert_handler)(std::format("Assertion '{}' failed", condition), where);
+	std::abort();
 }
 
 void assert_failure_handler::impl(
@@ -109,6 +111,7 @@ void assert_failure_handler::impl(
 	val += "\' failed: ";
 	val += std::vformat(fmt, args);
 	(*g_assert_handler)(val, where);
+	std::abort();
 }
 
 }
