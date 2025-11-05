@@ -60,6 +60,7 @@ auto towstring(std::string_view in) -> std::wstring
 		<< "\tFile " << path << ":" << where.line() << std::endl;
 #endif
 	};
+
 	std::string_view filename = where.file_name();
 #if defined(SHION_BUILD_ROOT)
 	auto root = std::filesystem::path(SHION_BUILD_ROOT);
@@ -80,5 +81,34 @@ auto towstring(std::string_view in) -> std::wstring
 };
 
 std::atomic<assert_handler> g_assert_handler = &default_assert_handler;
+
+void assert_failure_handler::operator()(
+	std::string_view condition,
+	std::string_view msg
+)
+{
+	(*g_assert_handler)(std::format("Assertion '{}' failed: {}", condition, msg), where);
+}
+
+void assert_failure_handler::operator()(
+	std::string_view condition
+)
+{
+	(*g_assert_handler)(std::format("Assertion '{}' failed", condition), where);
+}
+
+void assert_failure_handler::impl(
+	std::string_view condition,
+	std::string_view fmt,
+	std::format_args args
+)
+{
+	std::string val = std::string("Assertion ");
+	val += '\'';
+	val += condition;
+	val += "\' failed: ";
+	val += std::vformat(fmt, args);
+	(*g_assert_handler)(val, where);
+}
 
 }

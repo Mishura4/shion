@@ -89,7 +89,7 @@ if (UNIX OR CLANG_CL)
 endif ()
 
 
-set(SHION_HEADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(SHION_HEADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(SHION_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/src")
 
 file(GLOB_RECURSE SHION_HEADERS "${SHION_HEADERS_DIR}/shion/*.hpp")
@@ -151,7 +151,7 @@ function(create_library lib bin type)
 	target_compile_definitions(shion-${lib} PUBLIC ${SHION_PUBLIC_BUILD_DEFINITIONS})
 	target_include_directories(shion-${lib}
 		PUBLIC
-			"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+			"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>"
 			"$<INSTALL_INTERFACE:include>"
 	)
 	target_include_directories(shion-${lib} PRIVATE ${SHION_SOURCE_DIR})

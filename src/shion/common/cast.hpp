@@ -27,7 +27,7 @@ constexpr To lossless_cast(From v) noexcept {
 			if constexpr (std::is_unsigned_v<To>) {
 				SHION_ASSERT(v >= 0);
 			} else {
-				SHION_ASSERT(v >= ((std::numeric_limits<To>::min))());
+				SHION_ASSERT(v >= (std::numeric_limits<To>::min)());
 			}
 		}
 		return static_cast<To>(v);

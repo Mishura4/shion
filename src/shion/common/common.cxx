@@ -8,6 +8,7 @@ module;
 #include <filesystem>
 #include <iostream>
 #include <syncstream>
+#include <version>
 
 #if _WIN32
 #include <Windows.h>

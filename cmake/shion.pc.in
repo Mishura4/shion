@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+includedir=${prefix}/include
+libdir=${exec_prefix}/lib
+
+Name: shion
+Description: Shion
+Version: 0.0.0
+Cflags: -I${includedir} @SHION_REF_MODULES@
+Libs: -L${libdir} -lshion
