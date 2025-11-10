@@ -84,7 +84,6 @@ test_suite &make_test_suite(std::string name);
 
 struct test_failure_exception : shion::internal_exception {
 	using internal_exception::internal_exception;
-	using internal_exception::operator=;
 };
 
 } // namespace shion::tests

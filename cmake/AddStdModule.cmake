@@ -3,7 +3,14 @@ function(AddStdModule NAME)
 	add_library(${NAME} STATIC EXCLUDE_FROM_ALL)
 
 	if (MSVC)
-		set(ModuleSystemPath "$ENV{VCToolsInstallDir}/modules/std.ixx")
+		set(ModuleSystemDir "$ENV{VCToolsInstallDir}")
+		cmake_path(APPEND ModuleSystemDir "modules")
+
+
+		cmake_path(APPEND ModuleSystemDir "std.ixx" OUTPUT_VARIABLE ModulePath)
+		list(APPEND SystemModules ${ModulePath})
+		cmake_path(APPEND ModuleSystemDir "std.compat.ixx" OUTPUT_VARIABLE ModulePath)
+		list(APPEND SystemModules ${ModulePath})
 	else ()
 		include(CheckCXXSourceCompiles)
 
@@ -39,18 +46,22 @@ function(AddStdModule NAME)
 		file(READ "${ModulesJsonPath}" ModulesJson)
 
 		cmake_path(REMOVE_FILENAME ModulesJsonPath OUTPUT_VARIABLE ModuleSystemDir)
-
-		string(JSON ModuleSystemPath         GET    ${ModulesJson} modules 0 source-path)
-		string(JSON ModuleSystemIncludeCount LENGTH ${ModulesJson} modules 0 local-arguments system-include-directories)
-		math(EXPR ModuleSystemIncludeCount "${ModuleSystemIncludeCount} - 1")
-
-		foreach (i RANGE 0 ${ModuleSystemIncludeCount})
-			string(JSON IncludePath GET ${ModulesJson} modules 0 local-arguments system-include-directories ${i})
-			cmake_path(ABSOLUTE_PATH IncludePath BASE_DIRECTORY ${ModuleSystemDir} NORMALIZE)
-			list(APPEND ModuleSystemInclude ${IncludePath})
-		endforeach ()
 		
-		cmake_path(ABSOLUTE_PATH ModuleSystemPath BASE_DIRECTORY ${ModuleSystemDir} NORMALIZE)
+		string(JSON ModuleCount              LENGTH ${ModulesJson} modules)
+		math(EXPR ModuleCount "${ModuleCount} - 1")
+
+		foreach (modi RANGE 0 ${ModuleCount})
+			string(JSON ModuleSystemPath         GET    ${ModulesJson} modules ${modi} source-path)
+			cmake_path(ABSOLUTE_PATH ModuleSystemPath BASE_DIRECTORY ${ModuleSystemDir} NORMALIZE)
+			list(APPEND SystemModules ${ModuleSystemPath})
+			string(JSON ModuleSystemIncludeCount LENGTH ${ModulesJson} modules ${modi} local-arguments system-include-directories)
+			math(EXPR ModuleSystemIncludeCount "${ModuleSystemIncludeCount} - 1")
+			foreach (inci RANGE 0 ${ModuleSystemIncludeCount})
+				string(JSON IncludePath GET ${ModulesJson} modules ${modi} local-arguments system-include-directories ${inci})
+				cmake_path(ABSOLUTE_PATH IncludePath BASE_DIRECTORY ${ModuleSystemDir} NORMALIZE)
+				list(APPEND ModuleSystemInclude ${IncludePath})
+			endforeach ()
+		endforeach ()
 
 		if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 			target_compile_options(${NAME} PRIVATE "-Wno-reserved-module-identifier")
@@ -60,21 +71,26 @@ function(AddStdModule NAME)
 	endif ()
 
 	set(ModulePath "${PROJECT_BINARY_DIR}")
-	
-	cmake_path(GET ModuleSystemPath FILENAME ModuleFileName)
-	cmake_path(APPEND ModulePath ${ModuleFileName})
 
-	file(COPY_FILE
-		${ModuleSystemPath}
-		${ModulePath}
-	)
+	foreach (file ${SystemModules})
+		cmake_path(GET file FILENAME ModuleFileName)
+		set(modfile ${CMAKE_CURRENT_BINARY_DIR})
+		cmake_path(APPEND modfile ${ModuleFileName})
+
+		file(COPY_FILE
+			${file}
+			${modfile}
+		)
+
+		list(APPEND Modules ${modfile})
+	endforeach ()
 
 	set(SHION_LINK_STD_MODULE on PARENT_SCOPE)
 
 	target_sources(${NAME}
 		PUBLIC FILE_SET CXX_MODULES
 		BASE_DIRS ${CMAKE_CURRENT_BINARY_DIR}
-		FILES ${ModulePath}
+		FILES ${Modules}
 	)
 
 	target_compile_features(${NAME} PUBLIC cxx_std_23)

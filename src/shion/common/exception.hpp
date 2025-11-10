@@ -44,7 +44,7 @@ private:
 
 SHION_EXPORT class internal_exception : public exception {
 public:
-	using exception::operator=;
+	using exception::exception;
 
 	SHION_API internal_exception(std::source_location loc = std::source_location::current());
 	SHION_API internal_exception(const std::string &msg, std::source_location loc = std::source_location::current());
@@ -64,7 +64,6 @@ private:
 SHION_EXPORT class logic_exception : public exception {
 public:
 	using exception::exception;
-	using exception::operator=;
 };
 
 /**
@@ -73,7 +72,6 @@ public:
 SHION_EXPORT class task_cancelled_exception : public exception {
 public:
 	using exception::exception;
-	using exception::operator=;
 	
 	SHION_API task_cancelled_exception();
 };
