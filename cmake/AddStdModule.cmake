@@ -40,8 +40,12 @@ function(AddStdModule NAME)
 			message(FATAL_ERROR "Cannot build std module: compiler ${CMAKE_CXX_COMPILER} didn't provide modules.json (${ModulesJsonResult})")
 		endif ()
 
+		message("Detected modules.json: ${ModulesJsonPath}")
+
 		cmake_path(ABSOLUTE_PATH ModulesJsonPath NORMALIZE)
 		cmake_path(REMOVE_FILENAME ModulesJsonPath OUTPUT_VARIABLE ModulesJsonDir)
+
+		message("Parsing modules.json: ${ModulesJsonPath}")
 
 		file(READ "${ModulesJsonPath}" ModulesJson)
 
@@ -54,13 +58,16 @@ function(AddStdModule NAME)
 			string(JSON ModuleSystemPath         GET    ${ModulesJson} modules ${modi} source-path)
 			cmake_path(ABSOLUTE_PATH ModuleSystemPath BASE_DIRECTORY ${ModuleSystemDir} NORMALIZE)
 			list(APPEND SystemModules ${ModuleSystemPath})
-			string(JSON ModuleSystemIncludeCount LENGTH ${ModulesJson} modules ${modi} local-arguments system-include-directories)
-			math(EXPR ModuleSystemIncludeCount "${ModuleSystemIncludeCount} - 1")
-			foreach (inci RANGE 0 ${ModuleSystemIncludeCount})
-				string(JSON IncludePath GET ${ModulesJson} modules ${modi} local-arguments system-include-directories ${inci})
-				cmake_path(ABSOLUTE_PATH IncludePath BASE_DIRECTORY ${ModuleSystemDir} NORMALIZE)
-				list(APPEND ModuleSystemInclude ${IncludePath})
-			endforeach ()
+
+			if (IS_LIBCXX)
+				string(JSON ModuleSystemIncludeCount LENGTH ${ModulesJson} modules ${modi} local-arguments system-include-directories)
+				math(EXPR ModuleSystemIncludeCount "${ModuleSystemIncludeCount} - 1")
+				foreach (inci RANGE 0 ${ModuleSystemIncludeCount})
+					string(JSON IncludePath GET ${ModulesJson} modules ${modi} local-arguments system-include-directories ${inci})
+					cmake_path(ABSOLUTE_PATH IncludePath BASE_DIRECTORY ${ModuleSystemDir} NORMALIZE)
+					list(APPEND ModuleSystemInclude ${IncludePath})
+				endforeach ()
+			endif ()
 		endforeach ()
 
 		if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
