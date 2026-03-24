@@ -35,11 +35,17 @@
 
 // ------------- Internals -------------
 #if SHION_SHARED
-#	if defined(_WIN32) && _WIN32
+#	if defined(_WIN32)
 #		if SHION_BUILD
 #			define SHION_API __declspec(dllexport)
+#			if SHION_BUILDING_MODULES
+#				define SHION_PRIVATE_API __declspec(dllexport)
+#			endif
 #		else
 #			define SHION_API __declspec(dllimport)
+#			if SHION_BUILDING_MODULES
+#				define SHION_PRIVATE_API __declspec(dllimport)
+#			endif
 #			define SHION_EXPORT_API SHION_API
 #		endif /* SHION_BUILDING_LIBRARY */
 #	endif /* _WIN32 */
@@ -54,6 +60,10 @@
 #ifndef SHION_API
 #	define SHION_API
 #endif /* SHION_API */
+
+#ifndef SHION_PRIVATE_API
+#	define SHION_PRIVATE_API
+#endif /* SHION_PRIVATE_API */
 
 #ifndef SHION_EXPORT_API
 #define SHION_EXPORT_API inline

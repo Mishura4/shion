@@ -337,7 +337,7 @@ public:
 namespace detail
 {
 
-struct state_machine_common
+SHION_PRIVATE_API struct state_machine_common
 {
 	std::coroutine_handle<>             continuation{ std::noop_coroutine() };
 
