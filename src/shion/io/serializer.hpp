@@ -155,7 +155,7 @@ struct serializer_helper {
 	 * @retval If < 0, the size is expected to be incomplete and this function shall be called again.
 	 * @retval If > 0, the size is complete and can be extracted.
 	 */
-	constexpr auto size(std::span<const std::byte> bytes, std::endian endian = std::endian::native) -> ptrdiff_t = delete;
+	constexpr auto size(std::span<const std::byte> bytes, std::endian endian = std::endian::native) -> ssize_t = delete;
 
 	/**
 	 * @brief Extracts a value from a buffer.
@@ -168,7 +168,7 @@ struct serializer_helper {
 	 * @retval If 0, the deserialization shall abort.
 	 * @retval If != 0 && <= bytes.size(), the behavior is undefined.
 	 */
-	constexpr auto read(std::span<const std::byte> bytes, T& value, std::endian endian = std::endian::native) -> ptrdiff_t = delete;
+	constexpr auto read(std::span<const std::byte> bytes, T& value, std::endian endian = std::endian::native) -> ssize_t = delete;
 
 	/**
 	 * @brief Write a value to the buffer.
@@ -182,7 +182,7 @@ struct serializer_helper {
 	 * @retval If > bytes.size(), the serializer may obtain more bytes and call the function again, if possible.
 	 * @retval If != 0 && <= bytes.size(), the behavior is undefined.
 	 */
-	constexpr auto write(std::span<std::byte> bytes, const T& value, std::endian endian = std::endian::native) -> ptrdiff_t = delete;
+	constexpr auto write(std::span<std::byte> bytes, const T& value, std::endian endian = std::endian::native) -> ssize_t = delete;
 };
 
 SHION_EXPORT template <typename T>
@@ -309,7 +309,7 @@ struct scalar_serializer<T>
 	}
 	
 private:
-	constexpr auto _read(std::span<std::byte const> bytes, T& value) noexcept -> ptrdiff_t
+	constexpr auto _read(std::span<std::byte const> bytes, T& value) noexcept -> ssize_t
 	{
 		if (!std::is_constant_evaluated())
 			std::memcpy(&value, bytes.data(), sizeof(T));
@@ -322,7 +322,7 @@ private:
 		return sizeof(T);
 	}
 
-	constexpr auto _write(std::span<std::byte> bytes, const T& value) noexcept -> ptrdiff_t
+	constexpr auto _write(std::span<std::byte> bytes, const T& value) noexcept -> ssize_t
 	{
 		if (!std::is_constant_evaluated())
 			std::memcpy(bytes.data(), &value, sizeof(T));
@@ -357,12 +357,12 @@ public:
 		return t;
 	}
 
-	constexpr auto size(std::span<std::byte const> /* bytes */, std::endian /* endian */ = std::endian::native) -> ptrdiff_t
+	constexpr auto size(std::span<std::byte const> /* bytes */, std::endian /* endian */ = std::endian::native) -> ssize_t
 	{
 		return sizeof(T);
 	}
 
-	constexpr auto read(std::span<std::byte const> bytes, T& value, std::endian endian = std::endian::native) noexcept -> ptrdiff_t
+	constexpr auto read(std::span<std::byte const> bytes, T& value, std::endian endian = std::endian::native) noexcept -> ssize_t
 	{
 		auto sz = this->_read(bytes, value);
 		if (endian != std::endian::native)
@@ -370,9 +370,9 @@ public:
 		return sz;
 	}
 
-	constexpr auto write(std::span<std::byte> bytes, const T& value, std::endian endian = std::endian::native) noexcept -> ptrdiff_t
+	constexpr auto write(std::span<std::byte> bytes, const T& value, std::endian endian = std::endian::native) noexcept -> ssize_t
 	{
-		constexpr ptrdiff_t sz = sizeof(T);
+		constexpr ssize_t sz = sizeof(T);
 		if (bytes.empty())
 			return sz;
 
@@ -436,19 +436,19 @@ struct tuple_serializer<T, Tag, std::index_sequence<Ns...>>
 	requires (deserialize_constructible<typename std::tuple_element<Ns, T>::type> && ...)
 #endif
 	{
-		SHION_ASSERT(size(bytes, endian) <= static_cast<ptrdiff_t>(bytes.size()));
+		SHION_ASSERT(size(bytes, endian) <= static_cast<ssize_t>(bytes.size()));
 		return T{ get<Ns>(proxies).construct(bytes, endian)... };
 	}
 
-	constexpr auto size(std::span<const byte> bytes, std::endian endian = std::endian::native) -> ptrdiff_t
+	constexpr auto size(std::span<const byte> bytes, std::endian endian = std::endian::native) -> ssize_t
 #if !SHION_INTELLISENSE
 	requires (deserializable<typename std::tuple_element<Ns, T>::type> && ...)
 #endif
 	{
-		ptrdiff_t sz = 0;
+		ssize_t sz = 0;
 		bool failed = false;
-		auto validate = [&sz, endian, bytes, &failed]<size_t N>(proxy_t<N>& proxy) mutable constexpr -> ptrdiff_t {
-			ptrdiff_t size;
+		auto validate = [&sz, endian, bytes, &failed]<size_t N>(proxy_t<N>& proxy) mutable constexpr -> ssize_t {
+			ssize_t size;
 			if constexpr (detail::serializer::is_constant_size_serializer<proxy_t<N>>)
 			{
 				(void)bytes;
@@ -463,22 +463,22 @@ struct tuple_serializer<T, Tag, std::index_sequence<Ns...>>
 
 				size = proxy.size(bytes.subspan(sz), endian);
 				sz += size * bool_to_sign(size > 0);
-				failed = size < 0 || sz > static_cast<ptrdiff_t>(bytes.size());
+				failed = size < 0 || sz > static_cast<ssize_t>(bytes.size());
 			}
 			return size;
 		};
-		std::initializer_list<ptrdiff_t> values [[maybe_unused]] = { validate.template operator()<Ns>(get<Ns>(proxies))... };
+		std::initializer_list<ssize_t> values [[maybe_unused]] = { validate.template operator()<Ns>(get<Ns>(proxies))... };
 		return bool_to_sign(!failed) * sz;
 	}
 
-	constexpr auto read(std::span<const byte> bytes, T& value, std::endian endian = std::endian::native) -> ptrdiff_t
+	constexpr auto read(std::span<const byte> bytes, T& value, std::endian endian = std::endian::native) -> ssize_t
 #if !SHION_INTELLISENSE
 	requires (deserializable<typename std::tuple_element<Ns, T>::type> && ...)
 #endif
 	{
-		SHION_ASSERT(static_cast<ptrdiff_t>(bytes.size()) >= size(bytes, endian));
+		SHION_ASSERT(static_cast<ssize_t>(bytes.size()) >= size(bytes, endian));
 
-		ptrdiff_t sz = 0;
+		ssize_t sz = 0;
 		auto impl = [endian, bytes, &value, &sz]<size_t N>(proxy_t<N>& proxy) mutable constexpr {
 			sz += proxy.read(bytes.subspan(sz), get<N>(value), endian);
 			return empty{};
@@ -487,7 +487,7 @@ struct tuple_serializer<T, Tag, std::index_sequence<Ns...>>
 		return sz;
 	}
 
-	constexpr auto write(std::span<byte> bytes, const T& value, std::endian endian = std::endian::native) -> ptrdiff_t
+	constexpr auto write(std::span<byte> bytes, const T& value, std::endian endian = std::endian::native) -> ssize_t
 #if !SHION_INTELLISENSE
 	requires (serializable<typename std::tuple_element<Ns, T>::type> && ...)
 #endif
@@ -519,7 +519,7 @@ struct serializer_input_iterator
 {
 	using value_type = T;
 	using reference = T;
-	using difference_type = ptrdiff_t;
+	using difference_type = ssize_t;
 	
 	std::span<const byte>* bytes{};
 	size_t cur_size{};
@@ -583,7 +583,7 @@ inline constexpr auto read_compressed_range_size(std::span<const std::byte> byte
 {
 	struct result
 	{
-		ptrdiff_t idx_out;
+		ssize_t idx_out;
 		size_t range_size;
 	};
 	result ret { 0, 0 };
@@ -592,7 +592,7 @@ inline constexpr auto read_compressed_range_size(std::span<const std::byte> byte
 	while ((byte & size_bit) != 0)
 	{
 		auto idx = ret.idx_out++;
-		if (static_cast<ptrdiff_t>(bytes.size()) < ret.idx_out)
+		if (static_cast<ssize_t>(bytes.size()) < ret.idx_out)
 		{
 			ret.idx_out *= -1;
 			return ret;
@@ -769,7 +769,7 @@ struct container_reader<T, Tag>
 	using proxy_t = serializer_helper<value_t, Tag>;
 	using size_type = std::ranges::range_size_t<T>;
 
-	constexpr auto _fill_contiguous(std::span<const byte> bytes, T& value, size_t range_size, std::endian endian = std::endian::native) -> ptrdiff_t
+	constexpr auto _fill_contiguous(std::span<const byte> bytes, T& value, size_t range_size, std::endian endian = std::endian::native) -> ssize_t
 	requires (std::ranges::contiguous_range<T>)
 	{
 		size_t start = 0;
@@ -782,11 +782,11 @@ struct container_reader<T, Tag>
 		{
 			SHION_ASSERT(value.size() >= range_size);
 		}
-		ptrdiff_t size_in_bytes = 0;
+		ssize_t size_in_bytes = 0;
 		if constexpr (std::is_scalar_v<value_t> && requires { requires proxy_t::trivial; })
 		{
 			size_in_bytes = sizeof(value_t) * range_size;
-			SHION_ASSERT(size_in_bytes <= static_cast<ptrdiff_t>(bytes.size()));
+			SHION_ASSERT(size_in_bytes <= static_cast<ssize_t>(bytes.size()));
 			std::memcpy(value.data() + start, bytes.data(), size_in_bytes);
 			if constexpr (sizeof(value_t) > 1 && !std::is_floating_point_v<value_t>)
 			{
@@ -801,19 +801,19 @@ struct container_reader<T, Tag>
 		{
 			for (size_t i = start; i < start + range_size; ++i)
 			{
-				ptrdiff_t sz = proxy_t{}.read(bytes.subspan(size_in_bytes), value[start + i], endian);
+				ssize_t sz = proxy_t{}.read(bytes.subspan(size_in_bytes), value[start + i], endian);
 				size_in_bytes += sz;
-				SHION_ASSERT(size_in_bytes <= static_cast<ptrdiff_t>(bytes.size()));
+				SHION_ASSERT(size_in_bytes <= static_cast<ssize_t>(bytes.size()));
 			}
 		}
 		return size_in_bytes;
 	}
 
 public:
-	constexpr auto size(std::span<const byte> bytes, std::endian endian = std::endian::native) -> ptrdiff_t
+	constexpr auto size(std::span<const byte> bytes, std::endian endian = std::endian::native) -> ssize_t
 	{
 		size_type range_size = 0;
-		ptrdiff_t size_in_bytes = 0;
+		ssize_t size_in_bytes = 0;
 		using size_proxy = serializer_helper<size_type, Tag>;
 
 		if constexpr (tuple_range<T>)
@@ -845,7 +845,7 @@ public:
 		{
 			while (i < range_size)
 			{
-				ptrdiff_t sz = proxy_t{}.size(bytes.subspan(size_in_bytes), endian);
+				ssize_t sz = proxy_t{}.size(bytes.subspan(size_in_bytes), endian);
 				if (sz < 0)
 					return (-1 * size_in_bytes) + sz;
 				
@@ -856,11 +856,11 @@ public:
 		}
 	}
 	
-	constexpr auto read(std::span<const byte> bytes, T& value, std::endian endian = std::endian::native) -> ptrdiff_t
+	constexpr auto read(std::span<const byte> bytes, T& value, std::endian endian = std::endian::native) -> ssize_t
 	requires (deserializable<value_t>)
 	{
 		size_type range_size = 0;
-		ptrdiff_t size_in_bytes = 0;
+		ssize_t size_in_bytes = 0;
 		using size_proxy = serializer_helper<size_type, Tag>;
 
 		if constexpr (tuple_range<T>)
@@ -883,7 +883,7 @@ public:
 			}
 		}
 
-		SHION_ASSERT(size_in_bytes <= static_cast<ptrdiff_t>(bytes.size()));
+		SHION_ASSERT(size_in_bytes <= static_cast<ssize_t>(bytes.size()));
 		bytes = bytes.subspan(size_in_bytes);
 		if constexpr (std::ranges::contiguous_range<T>)
 		{
@@ -933,10 +933,10 @@ struct container_writer<T, Tag>
 	using value_t = std::ranges::range_value_t<T>;
 	using proxy_t = serializer_helper<value_t, Tag>;
 
-	constexpr auto write(std::span<std::byte> bytes, const T& value, std::endian endian = std::endian::native) -> ptrdiff_t
+	constexpr auto write(std::span<std::byte> bytes, const T& value, std::endian endian = std::endian::native) -> ssize_t
 	requires (serializable<value_t>)
 	{
-		ptrdiff_t sz = 0;
+		ssize_t sz = 0;
 		auto   size = std::ranges::size(value);
 		if (bytes.empty())
 		{
@@ -973,7 +973,7 @@ struct container_writer<T, Tag>
 			auto range_size = std::ranges::size(value);
 			if constexpr (requires { requires size_proxy::trivial; })
 			{
-				ptrdiff_t range_size_bytes = num_bytes_for_size(range_size);
+				ssize_t range_size_bytes = num_bytes_for_size(range_size);
 				while (sz < range_size_bytes)
 				{
 					auto shifted = range_size >> (size_shift * (range_size_bytes - sz - 1));

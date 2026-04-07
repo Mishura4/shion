@@ -10,6 +10,8 @@ namespace shion::tests
 bool hive_test_nontrivial(test& self);
 bool hive_test_trivial(test& self);
 
-bool shelf_tests_insert_erase(test& self);
+bool concurrent_flush_simple(test& self);
+bool concurrent_flush_order(test& self);
+bool concurrent_flush_state_machine(test& self);
 
 }

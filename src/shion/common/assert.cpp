@@ -1,19 +1,22 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#include <shion/common/assert.hpp>
+	#include <shion/common/assert.hpp>
+	#if !SHION_IMPORT_STD
+		#include <string>
+		#include <cstdlib>
+		#include <filesystem>
+		#include <iostream>
+		#include <syncstream>
+	#endif
 
-#include <cstdlib>
-#include <filesystem>
+	#if _WIN32
+		#include <Windows.h>
+	#endif
 
-#if _WIN32
-#include <string>
-#include <Windows.h>
-#else
-#include <iostream>
-#include <syncstream>
-#endif
-
+	#if SHION_IMPORT_STD
+	import std;
+	#endif
 #endif
 
 namespace SHION_NAMESPACE
@@ -35,7 +38,25 @@ auto towstring(std::string_view in) -> std::wstring
 	});
 	return str;
 }
+
+auto tostring(std::wstring_view in) -> std::string
+{
+	std::string str;
+
+	size_t sz{};
+	wcstombs_s(&sz, nullptr, 0, in.data(), in.size());
+	str.resize_and_overwrite(sz, [&](char* buf, std::size_t len) noexcept {
+		wcstombs_s(nullptr, buf, len, in.data(), in.size());
+		return sz;
+	});
+	return str;
+}
 #endif
+
+auto tostring(std::string_view in) -> std::string
+{
+	return std::string{in};
+}
 
 }
 
@@ -45,7 +66,7 @@ auto towstring(std::string_view in) -> std::wstring
 )
 {
 	auto report = [&](auto path) {
-#ifdef _WIN32
+#if defined(_WIN32) and not defined(NDEBUG)
 		if constexpr (std::convertible_to<decltype(path), const wchar_t*>)
 		{
 			_wassert(towstring(msg).c_str(), path, where.line());
@@ -57,7 +78,7 @@ auto towstring(std::string_view in) -> std::wstring
 #else
 	//std::osyncstream oss(std::cerr);
 	std::cerr << "Assertion failed: " << msg << "\n"
-		<< "\tFile " << path << ":" << where.line() << std::endl;
+		<< "\tFile " << tostring(path) << ":" << where.line() << std::endl;
 #endif
 	};
 

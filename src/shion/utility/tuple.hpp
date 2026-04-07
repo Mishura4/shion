@@ -17,6 +17,26 @@
 
 namespace SHION_NAMESPACE {
 
+SHION_EXPORT template <typename... Args>
+struct tuple;
+
+SHION_EXPORT template <typename... Args>
+struct tuple_size_selector<tuple<Args...>>
+{
+	using type = tuple_size<tuple<Args...>>;
+};
+
+SHION_EXPORT template <size_t I, typename... Args>
+struct tuple_element_selector<I, tuple<Args...>>
+{
+	using type = tuple_element<I, tuple<Args...>>;
+};
+
+template <typename... Args>
+struct tuple_size<tuple<Args...>> : std::integral_constant<size_t, sizeof...(Args)>
+{
+};
+
 namespace detail {
 
 template <typename T, typename Tuple, typename IdxSeq>
@@ -214,7 +234,7 @@ public:
 
 }
 
-SHION_EXPORT template <typename... Args>
+template <typename... Args>
 struct tuple : detail::_tuple_impl<std::make_index_sequence<sizeof...(Args)>, Args...> {
 private:
 	using my_base = detail::_tuple_impl<std::make_index_sequence<sizeof...(Args)>, Args...>;
@@ -475,7 +495,7 @@ constexpr auto forward_as_tuple(Ts&&... args) noexcept {
 
 }
 
-SHION_EXPORT template <size_t I, typename... Args>
+SHION_EXPORT template <std::size_t I, typename... Args>
 requires (I <= sizeof...(Args))
 struct std::tuple_element<I, SHION_NAMESPACE :: tuple<Args...>> : SHION_NAMESPACE :: tuple_element<I, SHION_NAMESPACE :: tuple<Args...>>
 {

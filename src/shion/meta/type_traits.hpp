@@ -220,11 +220,6 @@ concept implicit_lifetime_type = is_implicit_lifetime_v<T>;
 template <typename T>
 struct tuple_size {};
 
-template <typename... Args>
-struct tuple_size<tuple<Args...>> : std::integral_constant<size_t, sizeof...(Args)>
-{
-};
-
 template <size_t I, typename T>
 struct tuple_element {};
 
@@ -234,22 +229,10 @@ struct tuple_size_selector // Workaround msvc struggling to export std::tuple_si
 	using type = std::tuple_size<T>;
 };
 
-template <typename... Args>
-struct tuple_size_selector<tuple<Args...>>
-{
-	using type = tuple_size<tuple<Args...>>;
-};
-
 template <size_t I, typename T>
 struct tuple_element_selector // Workaround msvc struggling to export std::tuple_size partial specialization
 {
 	using type = std::tuple_element<I, T>;
-};
-
-template <size_t I, typename... Args>
-struct tuple_element_selector<I, tuple<Args...>>
-{
-	using type = tuple_element<I, tuple<Args...>>;
 };
 
 template <typename T>

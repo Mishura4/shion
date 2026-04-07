@@ -2,6 +2,7 @@ module;
 
 #include <shion/export.hpp>
 #include <shion/common/defines.hpp>
+#include <shion/meta/macros.hpp>
 
 #if !SHION_IMPORT_STD
 #include <cmath>
@@ -29,5 +30,6 @@ SHION_EXTERN_CPP_START
 #include "shion/math/util.hpp"
 #include "shion/math/color.hpp"
 #include "shion/math/vector.hpp"
+#include "shion/math/arithmetic.hpp"
 
 SHION_EXTERN_CPP_END

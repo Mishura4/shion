@@ -2,6 +2,7 @@ module;
 
 #include <shion/export.hpp>
 #include <shion/common/defines.hpp>
+#include <shion/meta/macros.hpp>
 
 #if !SHION_IMPORT_STD
 #include <algorithm>
@@ -23,6 +24,9 @@ module;
 #include <unordered_set>
 #include <unordered_map>
 #include <source_location>
+#if defined(__cpp_lib_generator) && __cpp_lib_generator >= 202207L
+#include <generator>
+#endif
 #endif
 
 export module shion:containers;
@@ -33,14 +37,16 @@ import std;
 import :common;
 import :utility;
 import :meta;
+import :coro;
 
 using namespace SHION_NAMESPACE ::literals;
 
 #if SHION_EXTERN_MODULES
 extern "C++" {
 #endif
-	
+
 #include "shion/containers/hive.hpp"
+#include "shion/containers/concurrent_flush.hpp"
 
 #if SHION_EXTERN_MODULES
 }

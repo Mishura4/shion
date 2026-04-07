@@ -20,7 +20,7 @@ struct basic_string_literal;
 
 }
 
-SHION_EXPORT template <typename CharT, size_t N>
+SHION_EXPORT template <typename CharT, std::size_t N>
 struct std::tuple_size<SHION_NAMESPACE ::basic_string_literal<CharT, N>>
 {
 	static constexpr size_t value = N + 1;

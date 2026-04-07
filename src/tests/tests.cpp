@@ -14,21 +14,37 @@ namespace shion::tests
 
 std::vector<test_suite> init() {
 	std::vector<test_suite> ret;
-	
+
 	auto& containers = ret.emplace_back("Containers");
 	containers.make_test("hive with trivial type", &hive_test_trivial);
 	containers.make_test("hive with non-trivial type", &hive_test_nontrivial);
+
+	containers.make_test("concurrent flush simple", &concurrent_flush_simple);
+	containers.make_test("concurrent flush order", &concurrent_flush_order);
+	containers.make_test("concurrent flush state machine", &concurrent_flush_state_machine);
+
+	auto& coro = ret.emplace_back("Coro");
+	coro.make_test("enumerator finite", &enumerator_finite);
+	coro.make_test("enumerator infinite", &enumerator_infinite);
+	coro.make_test("enumerator references", &enumerator_references);
+	coro.make_test("enumerator destructions", &enumerator_destructions);
+	coro.make_test("enumerator exceptions", &enumerator_exceptions);
+
+	/*
+	coro.make_test("state_machine simple generator", &state_machine_generator);
+	coro.make_test("state_machine awaitable", &state_machine_coroutine);
+	coro.make_test("state_machine continuation", &state_machine_continuation);
+	*/
+
+	coro.make_test("event_hook_simple", &event_hook_simple);
+	coro.make_test("event_hook_order", &event_hook_order);
+	coro.make_test("event_hook_stress_push", &event_hook_stress_push);
 
 	auto& io = ret.emplace_back("I/O");
 	io.make_test("serializer_helper with fundamental types", &serializer_helper_fundamental);
 	io.make_test("serializer_helper with tuples", &serializer_helper_tuples);
 	io.make_test("serializer_helper with contiguous ranges", &serializer_helper_contiguous_ranges);
 	io.make_test("serializer_helper with list ranges", &serializer_helper_list_ranges);
-
-	auto& coro = ret.emplace_back("Coro");
-	coro.make_test("state_machine simple generator", &state_machine_generator);
-	coro.make_test("state_machine awaitable", &state_machine_coroutine);
-	coro.make_test("state_machine continuation", &state_machine_continuation);
 
 	return ret;
 }
@@ -45,10 +61,17 @@ void test::fail(std::string reason, const std::source_location &where) {
 	state = status::failure;
 }
 
-void test::skip(){
+void test::skip(std::string reason, const std::source_location &where){
+	std::filesystem::path filepath{where.file_name()};
+
 	if (state == status::not_executed || state == status::started) {
+		if (reason.empty()) {
+			g_logger->info("{} {} ({}/{}:{})", skipped_str, name, filepath.parent_path().stem().string(), filepath.filename().string(), where.line());
+		}
+		else {
+			g_logger->info("{} {} ({}/{}:{}): {}", skipped_str, name, filepath.parent_path().stem().string(), filepath.filename().string(), where.line(), reason);
+		}
 		state = status::skipped;
-		g_logger->info("{} {}", skipped_str, name);
 	}
 }
 

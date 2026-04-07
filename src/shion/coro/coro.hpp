@@ -3,9 +3,6 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#  if !SHION_IMPORT_STD
-#    include <coroutine>
-#  endif
 #  include <shion/common.hpp>
 #endif
 
@@ -16,7 +13,8 @@ namespace SHION_NAMESPACE {
  *
  * @attention This is only meant to be used by the library internally. Support will not be given regarding the facilities in this namespace.
  */
-namespace detail {
+namespace detail
+{
 #ifdef _DOXYGEN_
 /**
  * @brief Alias for either std or std::experimental depending on compiler and library. Used by coroutine implementation.
@@ -31,6 +29,9 @@ namespace std_coroutine = std::experimental;
 namespace std_coroutine = std;
 #  endif
 #endif
+
+template <typename T = void>
+using coro_handle = std_coroutine::coroutine_handle<T>;
 
 #ifndef _DOXYGEN_
 /**
@@ -49,7 +50,7 @@ concept has_free_co_await = requires (T expr) { operator co_await(expr); };
  * @brief Concept to check if a type has useable `await_ready()`, `await_suspend()` and `await_resume()` member functions.
  */
 template <typename T>
-concept has_await_members = requires (T expr) { expr.await_ready(); expr.await_suspend(); expr.await_resume(); };
+concept has_await_members = requires (T expr, std::coroutine_handle<> handle) { expr.await_ready(); expr.await_suspend(handle); expr.await_resume(); };
 
 /**
  * @brief Mimics the compiler's behavior of using co_await. That is, it returns whichever works first, in order : `expr.operator co_await();` > `operator co_await(expr)` > `expr`
@@ -121,20 +122,65 @@ using awaitable_result = decltype(co_await_resolve(std::declval<T>()).await_resu
 
 } // namespace detail
 
-SHION_EXPORT template <typename R = void>
+SHION_EXPORT template <typename Reference = void, typename Value = void>
 class async;
 
-SHION_EXPORT template <typename R = void>
-requires (!std::is_reference_v<R>)
+SHION_EXPORT template <typename Reference = void, typename Value = void>
 class task;
 
-SHION_EXPORT template <typename R = void>
+SHION_EXPORT template <typename Reference = void, typename Value = void>
 class coroutine;
 
 SHION_EXPORT struct job;
 
 SHION_EXPORT template <typename T>
 concept awaitable_type = requires (T t) { detail::co_await_resolve(static_cast<T&&>(t)); };
+
+namespace detail::coro
+{
+
+template <typename StateHolder>
+class awaitable_impl;
+
+}
+
+inline namespace coro
+{
+
+SHION_EXPORT template <typename Reference, typename Value = void>
+class single_promise;
+
+SHION_EXPORT template <typename Reference, typename Value = void>
+class async_single_promise;
+
+}
+
+/**
+ * @brief Generic awaitable class, represents a future value that can be co_await-ed on.
+ *
+ * Roughly equivalent of std::future for coroutines, with the crucial distinction that the future does not own a reference to a "shared state".
+ * It holds a non-owning reference to the promise, which must be kept alive for the entire lifetime of the awaitable.
+ *
+ * @tparam T Type of the asynchronous value
+ * @see promise
+*/
+template <typename Reference, typename Value = void>
+class basic_awaitable;
+
+/**
+ * @brief Generic awaitable class, represents a future value that can be co_await-ed on.
+ *
+ * Roughly equivalent of std::future for coroutines, with the crucial distinction that the future does not own a reference to a "shared state".
+ * It holds a non-owning reference to the promise, which must be kept alive for the entire lifetime of the awaitable.
+ *
+ * @tparam T Type of the asynchronous value
+ * @see promise
+*/
+template <typename Reference, typename Value = void>
+class async_awaitable;
+
+template <typename Reference, typename Value = void>
+using awaitable = async_awaitable<Reference, Value>;
 
 #ifdef SHION_CORO_TEST
 /**

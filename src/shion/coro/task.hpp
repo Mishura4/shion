@@ -3,7 +3,7 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#include <shion/common/common.hpp>
+#include <shion/common.hpp>
 #include <shion/coro/coro.hpp>
 #include <shion/coro/awaitable.hpp>
 
@@ -20,7 +20,8 @@
 
 namespace SHION_NAMESPACE {
 
-SHION_EXPORT struct task_dummy : awaitable_dummy {
+SHION_EXPORT struct task_dummy
+{
 	int* handle_dummy = nullptr;
 };
 
@@ -61,68 +62,30 @@ using handle_t = std_coroutine::coroutine_handle<promise_t<R>>;
  * @class task task.h coro/task.h
  * @brief A coroutine task. It starts immediately on construction and can be co_await-ed, making it perfect for parallel coroutines returning a value.
  */
-SHION_EXPORT template <typename R>
-requires (!std::is_reference_v<R>)
-class task : public awaitable<R> {
-	friend struct detail::task::promise_t<R>;
+template <typename Reference, typename Value>
+class task : public detail::coro::awaitable<detail::task::handle_t<Reference>> {
+	using promise_type = detail::task::promise_t<Reference>;
+	using awaitable_base = detail::coro::awaitable<detail::task::handle_t<Reference>>;
+	using handle_t = detail::task::handle_t<Reference>;
+	using state_flags = detail::coro::state_flags;
 
-	using handle_t = detail::task::handle_t<R>;
-	using state_flags = detail::promise::state_flags;
-
-	handle_t handle{};
-
+	friend promise_type;
 protected:
 	/**
 	 * @brief Construct from a coroutine handle. Internal use only
 	 */
-	explicit task(handle_t handle_) : awaitable<R>(&handle_.promise()), handle(handle_) {}
+	explicit task(handle_t handle_) : awaitable_base(handle_) {}
 
 public:
-	/**
-	 * @brief Default constructor, creates a task not bound to a coroutine.
-	 */
-	task() = default;
-
-	/**
-	 * @brief Copy constructor is disabled
-	 */
-	task(const task &) = delete;
-
-	/**
-	 * @brief Move constructor, grabs another task's coroutine handle
-	 *
-	 * @param other Task to move the handle from
-	 */
-	task(task &&other) noexcept : awaitable<R>(std::move(other)), handle(std::exchange(other.handle, nullptr)) {}
-
-	/**
-	 * @brief Copy assignment is disabled
-	 */
-	task &operator=(const task &) = delete;
-
-	/**
-	 * @brief Move assignment, grabs another task's coroutine handle
-	 *
-	 * @param other Task to move the handle from
-	 */
-	task &operator=(task &&other) noexcept {
-		awaitable<R>::operator=(std::move(other));
-		handle = std::exchange(other.handle, nullptr);
-		return *this;
-	}
-
 	/**
 	 * @brief Destructor.
 	 *
 	 * Destroys the handle. If the task is still running, it will be cancelled.
 	 */
 	~task() {
-		if (handle && this->valid()) {
-			if (this->abandon() & state_flags::sf_done) {
-				handle.destroy();
-			} else {
-				cancel();
-			}
+		if (awaitable_base::valid() && !awaitable_base::release())
+		{
+			cancel();
 		}
 	}
 
@@ -131,8 +94,9 @@ public:
 	 *
 	 * @return bool Whether the task is finished.
 	 */
-	[[nodiscard]] bool done() const noexcept {
-		return handle && (!this->valid() || handle.promise().state.load(std::memory_order_relaxed) == state_flags::sf_done);
+	[[nodiscard]] bool done() const noexcept
+	{
+		return awaitable_base::valid() && awaitable_base::get_promise().done();
 	}
 
 	/**
@@ -141,7 +105,8 @@ public:
 	 * @return *this
 	 */
 	task& cancel() & noexcept {
-		handle.promise().cancelled.exchange(true, std::memory_order_relaxed);
+		SHION_ASSERT(this->valid());
+		awaitable_base::get_promise().cancel();
 		return *this;
 	}
 
@@ -151,7 +116,7 @@ public:
 	 * @return *this
 	 */
 	task&& cancel() && noexcept {
-		handle.promise().cancelled.exchange(true, std::memory_order_relaxed);
+		awaitable_base::get_promise().cancel();
 		return *this;
 	}
 };
@@ -165,8 +130,8 @@ struct final_awaiter {
 	/**
 	 * @brief Always suspend at the end of the task. This allows us to clean up and resume the parent
 	 */
-	[[nodiscard]] bool await_ready() const noexcept {
-		return (false);
+	[[nodiscard]] static bool await_ready() noexcept {
+		return false;
 	}
 
 	/**
@@ -175,19 +140,19 @@ struct final_awaiter {
 	 * @param handle The handle of this coroutine
 	 * @return std::coroutine_handle<> Handle to resume, which is either the parent if present or std::noop_coroutine() otherwise
 	 */
-	[[nodiscard]] std_coroutine::coroutine_handle<> await_suspend(handle_t<R> handle) const noexcept;
+	[[nodiscard]] static std_coroutine::coroutine_handle<> await_suspend(handle_t<R> handle) noexcept;
 
 	/**
 	 * @brief Function called when this object is co_awaited by the standard library at the end of final_suspend. Do nothing, return nothing
 	 */
-	void await_resume() const noexcept {}
+	static void await_resume() noexcept {}
 };
 
 /**
  * @brief Base implementation of task::promise_t, without the logic that would depend on the return type. Meant to be inherited from
  */
 template <typename R>
-struct promise_base : basic_promise<R> {
+struct promise_base : async_promise<R> {
 	/**
 	 * @brief Whether the task is cancelled or not.
 	 */
@@ -218,7 +183,7 @@ struct promise_base : basic_promise<R> {
 	 * Stores the exception pointer to rethrow on co_await. If the task object is destroyed and was not cancelled, throw instead
 	 */
 	void unhandled_exception() {
-		if ((this->state.load() == promise::state_flags::sf_broken) && !cancelled) {
+		if ((this->state.load() == coro::state_flags::sf_broken) && !cancelled) {
 			throw;
 		}
 		this->template set_exception<false>(std::current_exception());
@@ -273,13 +238,18 @@ struct promise_base : basic_promise<R> {
 		using awaitable_t = decltype(co_await_resolve(std::forward<T>(expr)));
 		return proxy_awaiter<awaitable_t>{*this, co_await_resolve(std::forward<T>(expr))};
 	}
+
+	bool cancel() noexcept
+	{
+		return !cancelled.exchange(true, std::memory_order_relaxed);
+	}
 };
 
 /**
  * @brief Implementation of task::promise_t for non-void return type
  */
 template <typename R>
-struct promise_t : promise_base<R> {
+struct promise_t : async_promise<R> {
 	friend struct final_awaiter<R>;
 
 	/**
@@ -372,10 +342,10 @@ struct promise_t<void> : promise_base<void> {
 };
 
 template <typename R>
-std_coroutine::coroutine_handle<> final_awaiter<R>::await_suspend(handle_t<R> handle) const noexcept {
-	using state_flags = promise::state_flags;
+std_coroutine::coroutine_handle<> final_awaiter<R>::await_suspend(handle_t<R> handle) noexcept {
+	using state_flags = coro::state_flags;
 	promise_t<R> &promise = handle.promise();
-	uint8_t previous_state = promise.state.fetch_or(state_flags::sf_done);
+	uint8 previous_state = promise.state.fetch_or(state_flags::sf_done);
 
 	if (previous_state & state_flags::sf_awaited) { // co_await-ed, resume parent
 		if (previous_state & state_flags::sf_broken) { // major bug, these should never be set together

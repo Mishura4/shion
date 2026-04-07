@@ -301,9 +301,9 @@ public:
 	}
 
 	constexpr ssize_t get_from_address(std::add_const_t<T>* element) const noexcept {
-		intptr_t addr = reinterpret_cast<intptr_t>(element);
-		intptr_t start = reinterpret_cast<intptr_t>(this->data.data());
-		intptr_t end = reinterpret_cast<intptr_t>(this->data.data() + this->data.size());
+		intptr addr = reinterpret_cast<intptr>(element);
+		intptr start = reinterpret_cast<intptr>(this->data.data());
+		intptr end = reinterpret_cast<intptr>(this->data.data() + this->data.size());
 
 		if (addr < start || addr >= end)
 			return -1;
@@ -547,11 +547,11 @@ public:
 
 	constexpr iterator get_iterator(std::add_const_t<T>* element) noexcept {
 		// We cast all pointers to intptr_t because comparing incompatible pointers is undefined behavior
-		intptr_t as_int = reinterpret_cast<intptr_t>(element);
+		intptr as_int = reinterpret_cast<intptr>(element);
 
 		for (page_iterator page_it = _pages.begin(); page_it != _pages.end(); ++page_it) {
-			intptr_t begin_as_int = reinterpret_cast<intptr_t>(&(*page_it->data.begin()));
-			intptr_t end_as_int = reinterpret_cast<intptr_t>(&(*page_it->data.rbegin())) + 1;
+			intptr begin_as_int = reinterpret_cast<intptr>(&(*page_it->data.begin()));
+			intptr end_as_int = reinterpret_cast<intptr>(&(*page_it->data.rbegin())) + 1;
 
 			if (as_int >= begin_as_int && as_int < end_as_int) {
 				if (auto idx = page_it->get_from_address(element); idx >= 0) {

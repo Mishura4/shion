@@ -158,6 +158,29 @@ size_t hash_combine(const T& lhs, const U& rhs, Hash = {})
 	return h(lhs) + 0x9e3779b9 + h(rhs);
 }
 
+SHION_EXPORT struct rethrow_t
+{
+	template <typename T>
+	[[noreturn]] static constexpr void operator()(const T& v)
+	{
+		throw v;
+	}
+
+	template <typename T>
+	[[noreturn]] static constexpr void operator()(std::exception_ptr ptr)
+	{
+		std::rethrow_exception(ptr);
+	}
+
+	template <typename T>
+	[[noreturn]] static constexpr void operator()(std::exception_ptr ptr, std::in_place_t)
+	{
+		throw ptr;
+	}
+};
+
+SHION_EXPORT inline constexpr auto rethrow = rethrow_t{};
+
 }
 
 #endif /* SHION_TOOLS_TOOLS_H_ */

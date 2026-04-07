@@ -13,28 +13,44 @@
 namespace SHION_NAMESPACE
 {
 
-SHION_EXPORT template <typename YieldRef, typename ReturnRef = YieldRef, typename Yield = void, typename Return = void>
+SHION_EXPORT template <typename YieldRef, typename Yield = void, typename ReturnRef = void, typename Return = void>
 class basic_state_machine;
 
-SHION_EXPORT template <typename YieldRef, typename ReturnRef = YieldRef>
+SHION_EXPORT template <typename YieldRef, typename Yield = YieldRef>
 class state_machine;
 
 namespace detail
 {
+
+template <typename YieldRef, typename Yield>
+struct state_machine_yield_meta
+{
+	using yield_value_t = std::conditional_t<std::is_void_v<Yield>, YieldRef, Yield>;
+	using yield_expr_t = std::remove_reference_t<yield_value_t>;
+	using yield_reference_t = std::conditional_t<std::is_void_v<Yield>, std::add_rvalue_reference_t<YieldRef>, YieldRef>;
+	using yield_storage_t = std::conditional_t<std::is_reference_v<yield_value_t>, std::add_pointer_t<std::remove_reference_t<yield_value_t>>, yield_value_t>;
+};
+
+template <typename ReturnRef, typename Return>
+struct state_machine_return_meta
+{
+	using return_value_t = std::conditional_t<std::is_void_v<Return>, std::remove_cvref_t<ReturnRef>, Return>;
+	using return_reference_t = std::conditional_t<std::is_void_v<Return>, std::add_rvalue_reference_t<ReturnRef>, ReturnRef>;
+};
+
+template <typename YieldRef, typename Yield, typename ReturnRef, typename Return>
+struct state_machine_meta : state_machine_yield_meta<YieldRef, Yield>, state_machine_return_meta<ReturnRef, Return>
+{
+};
 	
-template <typename YieldRef, typename ReturnRef, typename Yield, typename Return, typename Allocator>
+template <typename YieldRef, typename Yield, typename ReturnRef, typename Return, typename Allocator>
 struct state_machine_promise;
 
-template <typename YieldRef, typename ReturnRef, typename Yield, typename Return, typename Allocator>
-class state_machine_base
+template <typename YieldRef, typename Yield, typename ReturnRef, typename Return, typename Allocator>
+class state_machine_base : public detail::state_machine_meta<YieldRef, Yield, ReturnRef, Return>
 {
 public:
-	using yield_value_t = std::conditional_t<std::is_void_v<Yield>, std::remove_cvref_t<YieldRef>, Yield>;
-	using return_value_t = std::conditional_t<std::is_void_v<Return>, std::remove_cvref_t<ReturnRef>, Return>;
-	using yield_reference_t = std::conditional_t<std::is_void_v<Yield>, YieldRef&&, YieldRef>;
-	using return_reference_t = std::conditional_t<std::is_void_v<Return>, ReturnRef&&, ReturnRef>;
-
-	using promise_type = state_machine_promise<YieldRef, ReturnRef, Yield, Return, Allocator>;
+	using promise_type = state_machine_promise<YieldRef, Yield, ReturnRef, Return, Allocator>;
 	
 	constexpr state_machine_base() = default;
 	constexpr state_machine_base(const state_machine_base&) = delete;
@@ -51,7 +67,9 @@ public:
 	constexpr auto operator=(const state_machine_base &) -> state_machine_base& = delete;
 	constexpr auto operator=(state_machine_base &&rhs) noexcept -> state_machine_base&
 	{
-		_handle = std::exchange(rhs._handle, std::move(_handle));
+		if (_handle)
+			_handle.destroy();
+		_handle = std::exchange(rhs._handle, nullptr);
 		return *this;
 	}
 
@@ -66,6 +84,11 @@ public:
 		return _handle.done();
 	}
 
+	constexpr bool has_value() const noexcept
+	{
+		return valid() && get_promise().index() != 0;
+	}
+
 	constexpr operator bool() const noexcept
 	{
 		return valid();
@@ -76,6 +99,7 @@ public:
 		SHION_ASSERT(valid());
 		if (!done())
 		{
+			get_promise().clear();
 			_handle.resume();
 			return true;
 		}
@@ -97,9 +121,113 @@ template <typename YieldRef, typename ReturnRef, typename Yield, typename Return
 class state_machine_resume;
 
 template <typename YieldRef, typename Yield, typename Allocator>
-class state_machine_resume<YieldRef, YieldRef, Yield, Yield, Allocator> : public detail::state_machine_base<YieldRef, YieldRef, Yield, Yield, Allocator>
+class state_machine_resume<YieldRef, Yield, void, void, Allocator> : public detail::state_machine_base<YieldRef, Yield, void, void, Allocator>
 {
-	using my_base = detail::state_machine_base<YieldRef, YieldRef, Yield, Yield, Allocator>;
+	using my_base = detail::state_machine_base<YieldRef, Yield, void, void, Allocator>;
+
+public:
+	using typename my_base::promise_type;
+	using typename my_base::yield_value_t;
+	using typename my_base::yield_reference_t;
+	using typename my_base::return_value_t;
+	using typename my_base::return_reference_t;
+	using value_type = yield_value_t;
+	using reference_type = yield_reference_t;
+
+	constexpr state_machine_resume() = default;
+	constexpr state_machine_resume(state_machine_resume const&) = default;
+	constexpr state_machine_resume(state_machine_resume&&) = default;
+
+	constexpr auto operator=(state_machine_resume const&) -> state_machine_resume& = delete;
+	constexpr auto operator=(state_machine_resume&&) -> state_machine_resume& = default;
+
+	constexpr auto get_yielded_value() -> reference_type
+	{
+		auto value = std::get_if<1>(&this->get_promise().value);
+		if constexpr (std::is_reference_v<yield_value_t>)
+		{
+			return static_cast<yield_reference_t>(**value);
+		}
+		else
+		{
+			return static_cast<yield_reference_t>(*value);
+		}
+	}
+
+	constexpr auto get_return_value() -> reference_type
+	{
+		return get_yielded_value();
+	}
+
+	constexpr auto get() -> reference_type
+	{
+		return get_yielded_value();
+	}
+
+	constexpr auto operator()() -> reference_type
+	{
+		SHION_ASSERT(!this->done());
+		this->advance();
+		return get_yielded_value();
+	}
+
+protected:
+	state_machine_resume(std::coroutine_handle<promise_type> handle) noexcept :
+		my_base(std::move(handle))
+	{}
+};
+
+template <typename ReturnRef, typename Return, typename Allocator>
+class state_machine_resume<void, void, ReturnRef, Return, Allocator> : public detail::state_machine_base<void, void, ReturnRef, Return, Allocator>
+{
+	using my_base = detail::state_machine_base<void, void, ReturnRef, Return, Allocator>;
+
+public:
+	using typename my_base::promise_type;
+	using typename my_base::yield_value_t;
+	using typename my_base::yield_reference_t;
+	using typename my_base::return_value_t;
+	using typename my_base::return_reference_t;
+	using value_type = yield_value_t;
+	using reference_type = return_reference_t;
+
+	constexpr state_machine_resume() = default;
+	constexpr state_machine_resume(state_machine_resume const&) = default;
+	constexpr state_machine_resume(state_machine_resume&&) = default;
+
+	constexpr auto operator=(state_machine_resume const&) -> state_machine_resume& = delete;
+	constexpr auto operator=(state_machine_resume&&) -> state_machine_resume& = default;
+
+	constexpr auto get() -> reference_type
+	{
+		return get_return_value();
+	}
+
+	constexpr auto get_return_value() -> return_reference_t
+	{
+		SHION_ASSERT(this->done());
+		return static_cast<return_reference_t>(std::move(*std::get_if<1>(&this->get_promise().value)));
+	}
+
+	constexpr auto operator()() -> reference_type
+	{
+		SHION_ASSERT(!this->done());
+		this->advance();
+		auto ptr = std::get_if<1>(&this->get_promise().value);
+		SHION_ASSERT(ptr != nullptr, "State machine needs to return a value");
+		return static_cast<reference_type>(std::move(*ptr));
+	}
+
+protected:
+	state_machine_resume(std::coroutine_handle<promise_type> handle) noexcept :
+		my_base(std::move(handle))
+	{}
+};
+
+template <typename YieldRef, typename Yield, typename Allocator>
+class state_machine_resume<YieldRef, Yield, YieldRef, Yield, Allocator> : public detail::state_machine_base<YieldRef, Yield, YieldRef, Yield, Allocator>
+{
+	using my_base = detail::state_machine_base<YieldRef, Yield, YieldRef, Yield, Allocator>;
 
 public:
 	using typename my_base::promise_type;
@@ -136,7 +264,10 @@ public:
 	{
 		SHION_ASSERT(!this->done());
 		this->advance();
-		return static_cast<reference_type>(std::move(*std::get_if<1>(&this->get_promise().value)));
+		auto& promise = this->get_promise();
+		auto ptr = std::get_if<1>(&promise.value);
+		SHION_ASSERT(ptr != nullptr, "State machine needs to yield a value");
+		return static_cast<reference_type>(std::move(*ptr));
 	}
 
 protected:
@@ -146,9 +277,9 @@ protected:
 };
 
 template <typename Yield, typename Return, typename UniRef, typename Allocator>
-class state_machine_resume<UniRef, UniRef, Yield, Return, Allocator> : public detail::state_machine_base<UniRef, UniRef, Yield, Return, Allocator>
+class state_machine_resume<UniRef, Yield, UniRef, Return, Allocator> : public detail::state_machine_base<UniRef, Yield, UniRef, Return, Allocator>
 {
-	using my_base = detail::state_machine_base<UniRef, UniRef, Yield, Return, Allocator>;
+	using my_base = detail::state_machine_base<UniRef, Yield, UniRef, Return, Allocator>;
 
 public:
 	using typename my_base::promise_type;
@@ -167,8 +298,15 @@ public:
 
 	constexpr auto get_yielded_value() -> yield_reference_t
 	{
-		SHION_ASSERT(!this->done());
-		return static_cast<yield_reference_t>(std::move(*std::get_if<1>(&this->get_promise().value)));
+		auto value = std::get_if<1>(&this->get_promise().value);
+		if constexpr (std::is_reference_v<yield_value_t>)
+		{
+			return static_cast<yield_reference_t>(**value);
+		}
+		else
+		{
+			return static_cast<yield_reference_t>(*value);
+		}
 	}
 
 	constexpr auto get_return_value() -> return_reference_t
@@ -202,10 +340,43 @@ protected:
 	{}
 };
 
-template <typename YieldRef, typename ReturnRef, typename Yield, typename Return, typename Allocator>
-class state_machine_resume : public state_machine_base<YieldRef, ReturnRef, Yield, Return, Allocator>
+template <typename Allocator>
+class state_machine_resume<void, void, void, void, Allocator> : public detail::state_machine_base<void, void, void, void, Allocator>
 {
-	using my_base = detail::state_machine_base<YieldRef, ReturnRef, Yield, Return, Allocator>;
+	using my_base = detail::state_machine_base<void, void, void, void, Allocator>;
+
+public:
+	using typename my_base::promise_type;
+	using typename my_base::yield_value_t;
+	using typename my_base::yield_reference_t;
+	using typename my_base::return_value_t;
+	using typename my_base::return_reference_t;
+	using value_type = yield_value_t;
+	using reference_type = return_reference_t;
+
+	constexpr state_machine_resume() = default;
+	constexpr state_machine_resume(state_machine_resume const&) = default;
+	constexpr state_machine_resume(state_machine_resume&&) = default;
+
+	constexpr auto operator=(state_machine_resume const&) -> state_machine_resume& = delete;
+	constexpr auto operator=(state_machine_resume&&) -> state_machine_resume& = default;
+
+	constexpr auto operator()() -> void
+	{
+		SHION_ASSERT(!this->done());
+		this->advance();
+	}
+
+protected:
+	state_machine_resume(std::coroutine_handle<promise_type> handle) noexcept :
+		my_base(std::move(handle))
+	{}
+};
+
+template <typename YieldRef, typename Yield, typename ReturnRef, typename Return, typename Allocator>
+class state_machine_resume : public state_machine_base<YieldRef, Yield, ReturnRef, Return, Allocator>
+{
+	using my_base = detail::state_machine_base<YieldRef, Yield, ReturnRef, Return, Allocator>;
 
 public:
 	using typename my_base::promise_type;
@@ -214,9 +385,9 @@ public:
 	using typename my_base::return_value_t;
 	using typename my_base::return_reference_t;
 	using yield_pointer_t = std::add_pointer_t<std::remove_reference_t<YieldRef>>;
-	using yield_alternative_t = std::conditional_t<std::is_lvalue_reference_v<yield_reference_t&&>, yield_pointer_t, std::remove_reference_t<yield_reference_t>>;
+	using yield_alternative_t = std::conditional_t<std::is_reference_v<yield_reference_t>, yield_pointer_t, std::remove_reference_t<yield_reference_t>>;
 	using return_pointer_t = std::add_pointer_t<std::remove_reference_t<ReturnRef>>;
-	using return_alternative_t = std::conditional_t<std::is_lvalue_reference_v<return_reference_t&&>, return_pointer_t, std::remove_reference_t<return_reference_t>>;
+	using return_alternative_t = std::conditional_t<std::is_reference_v<return_reference_t>, return_pointer_t, std::remove_reference_t<return_reference_t>>;
 	using reference_type = std::variant<yield_alternative_t, return_alternative_t>;
 	
 	constexpr state_machine_resume() = default;
@@ -228,7 +399,15 @@ public:
 
 	constexpr auto get_yielded_value() -> yield_reference_t
 	{
-		return static_cast<yield_reference_t>(std::move(*std::get_if<1>(&this->get_promise().value)));
+		auto value = std::get_if<1>(&this->get_promise().value);
+		if constexpr (std::is_reference_v<yield_value_t>)
+		{
+			return static_cast<yield_reference_t>(**value);
+		}
+		else
+		{
+			return static_cast<yield_reference_t>(*value);
+		}
 	}
 
 	constexpr auto get_return_value() -> return_reference_t
@@ -278,10 +457,10 @@ protected:
 
 }
 
-SHION_EXPORT template <typename YieldRef, typename ReturnRef, typename Yield, typename Return>
-class SHION_COROLIFETIMEBOUND basic_state_machine : public detail::state_machine_resume<YieldRef, ReturnRef, Yield, Return, void>
+SHION_EXPORT template <typename YieldRef, typename Yield, typename ReturnRef, typename Return>
+class SHION_COROLIFETIMEBOUND basic_state_machine : public detail::state_machine_resume<YieldRef, Yield, ReturnRef, Return, void>
 {
-	using my_base = detail::state_machine_resume<YieldRef, ReturnRef, Yield, Return, void>;
+	using my_base = detail::state_machine_resume<YieldRef, Yield, ReturnRef, Return, void>;
 
 public:
 	using my_base::my_base;
@@ -317,11 +496,11 @@ protected:
 	{}
 };
 
-SHION_EXPORT template <typename Yield, typename Return>
-class SHION_COROLIFETIMEBOUND state_machine : public basic_state_machine<Yield, Return>
+template <typename YieldRef, typename Yield>
+class SHION_COROLIFETIMEBOUND state_machine : public basic_state_machine<YieldRef, Yield, YieldRef, std::remove_cvref_t<YieldRef>>
 {
 public:
-	using my_base = basic_state_machine<Yield, Return>;
+	using my_base = basic_state_machine<YieldRef, Yield, YieldRef, std::remove_cvref_t<YieldRef>>;
 	using typename my_base::promise_type;
 	using my_base::my_base;
 	using typename my_base::yield_value_t;
@@ -329,15 +508,13 @@ public:
 	using typename my_base::return_value_t;
 	using typename my_base::return_reference_t;
 
-	constexpr state_machine(basic_state_machine<Yield, Return>&& base) :
-		my_base(std::move(base))
-	{}
+	state_machine(my_base&& base) noexcept : my_base(std::move(base)) {}
 };
 
 namespace detail
 {
 
-SHION_PRIVATE_API struct state_machine_common
+struct SHION_PRIVATE_API state_machine_common
 {
 	std::coroutine_handle<>             continuation{ std::noop_coroutine() };
 
@@ -366,122 +543,236 @@ SHION_PRIVATE_API struct state_machine_common
 	constexpr auto final_suspend() noexcept -> awaiter { return {}; }
 };
 
-template <typename YieldRef, typename ReturnRef, typename Yield, typename Return>
-struct state_machine_meta
+template <typename YieldRef, typename Yield, typename ReturnRef, typename Return>
+struct state_machine_storage : state_machine_common, state_machine_meta<YieldRef, Yield, ReturnRef, Return>
 {
-	using yield_value_t = std::conditional_t<std::is_void_v<Yield>, std::remove_cvref_t<YieldRef>, Yield>;
-	using return_value_t = std::conditional_t<std::is_void_v<Return>, std::remove_cvref_t<ReturnRef>, Return>;
-	using yield_reference_t = std::conditional_t<std::is_void_v<Yield>, YieldRef&&, YieldRef>;
-	using return_reference_t = std::conditional_t<std::is_void_v<Return>, ReturnRef&&, ReturnRef>;
-};
-
-template <typename YieldRef, typename ReturnRef, typename Yield, typename Return>
-struct state_machine_storage : state_machine_common, state_machine_meta<YieldRef, ReturnRef, Yield, Return>
-{
-	using meta_t = state_machine_meta<YieldRef, ReturnRef, Yield, Return>;
+	using meta_t = state_machine_meta<YieldRef, Yield, ReturnRef, Return>;
 	using typename meta_t::yield_value_t;
-	using typename meta_t::return_value_t;
 	using typename meta_t::yield_reference_t;
+	using typename meta_t::yield_storage_t;
+	using typename meta_t::yield_expr_t;
+	using typename meta_t::return_value_t;
 	using typename meta_t::return_reference_t;
 
-	std::variant<std::monostate, yield_value_t, return_value_t> value;
+	std::variant<std::monostate, yield_storage_t, return_value_t> value;
 
-	void return_value(return_value_t ret) noexcept(std::is_nothrow_move_constructible_v<return_value_t>)
+	constexpr void return_value(return_value_t ret) noexcept(std::is_nothrow_move_constructible_v<return_value_t>)
 	requires (std::is_move_constructible_v<return_value_t> || std::is_copy_constructible_v<return_value_t>)
 	{
 		value.template emplace<2>(std::move(ret));
 	}
 
 	template <std::convertible_to<return_value_t> U>
-	void return_value(U&& ret) noexcept(std::is_nothrow_constructible_v<return_value_t, U>)
+	constexpr void return_value(U&& ret) noexcept(std::is_nothrow_constructible_v<return_value_t, U>)
 	{
 		value.template emplace<2>(std::forward<U>(ret));
 	}
 
-	auto yield_value(yield_value_t ret) noexcept(std::is_nothrow_move_constructible_v<yield_value_t>) -> awaiter
-	requires (std::is_move_constructible_v<yield_value_t> || std::is_copy_constructible_v<yield_value_t>)
+	constexpr auto yield_value(yield_expr_t& ret) noexcept(std::is_nothrow_copy_constructible_v<yield_value_t>) -> awaiter
+		requires (std::is_copy_constructible_v<yield_value_t>)
 	{
-		value.template emplace<1>(std::move(ret));
+		if constexpr (std::is_reference_v<yield_value_t>)
+		{
+			value.template emplace<1>(&ret);
+		}
+		else
+		{
+			value.template emplace<1>(ret);
+		}
+		return {};
+	}
+
+	constexpr auto yield_value(yield_expr_t&& ret) noexcept(std::is_nothrow_move_constructible_v<yield_value_t>) -> awaiter
+		requires (std::is_move_constructible_v<yield_value_t>)
+	{
+		if constexpr (std::is_reference_v<yield_value_t>)
+		{
+			value.template emplace<1>(&ret);
+		}
+		else
+		{
+			value.template emplace<1>(std::move(ret));
+		}
 		return {};
 	}
 
 	template <std::convertible_to<yield_value_t> U>
-	auto yield_value(U&& ret) noexcept(std::is_nothrow_constructible_v<yield_value_t, U>) -> awaiter
-	{
-		value.template emplace<1>(std::forward<U>(ret));
-		return {};
-	}
-};
-
-template <typename YieldRef, typename Yield>
-struct state_machine_storage <YieldRef, YieldRef, Yield, Yield> : state_machine_common, state_machine_meta<YieldRef, YieldRef, Yield, Yield>
-{
-	using meta_t = state_machine_meta<YieldRef, YieldRef, Yield, Yield>;
-	using typename meta_t::yield_value_t;
-	using typename meta_t::return_value_t;
-	using typename meta_t::yield_reference_t;
-	using typename meta_t::return_reference_t;
-
-	std::variant<std::monostate, yield_value_t> value;
-
-	constexpr void return_value(yield_value_t ret) noexcept(std::is_nothrow_move_constructible_v<yield_value_t>)
-	requires (std::is_move_constructible_v<yield_value_t> || std::is_copy_constructible_v<yield_value_t>)
-	{
-		value.template emplace<1>(std::move(ret));
-	}
-
-	template <std::convertible_to<yield_value_t> U>
-	constexpr void return_value(U&& ret) noexcept(std::is_nothrow_constructible_v<yield_value_t, U>)
-	{
-		value.template emplace<1>(std::forward<U>(ret));
-	}
-
-	constexpr auto yield_value(yield_value_t ret) noexcept(std::is_nothrow_move_constructible_v<yield_value_t>) -> awaiter
-	requires (std::is_move_constructible_v<yield_value_t> || std::is_copy_constructible_v<yield_value_t>)
-	{
-		value.template emplace<1>(std::move(ret));
-		return {};
-	}
-
-	template <std::convertible_to<yield_value_t> U>
+		requires (!std::is_reference_v<yield_value_t>)
 	constexpr auto yield_value(U&& ret) noexcept(std::is_nothrow_constructible_v<yield_value_t, U>) -> awaiter
 	{
 		value.template emplace<1>(std::forward<U>(ret));
 		return {};
 	}
+
+	constexpr void clear()
+	{
+		value.template emplace<0>();
+	}
 };
 
-
 template <typename YieldRef, typename Yield>
-struct state_machine_storage<YieldRef, void, Yield, void> : state_machine_common, state_machine_meta<YieldRef, void, Yield, void>
+struct state_machine_storage<YieldRef, Yield, YieldRef, Yield> : state_machine_common, state_machine_meta<YieldRef, Yield, YieldRef, Yield>
 {
-	using meta_t = state_machine_meta<YieldRef, void, Yield, void>;
+	using meta_t = state_machine_meta<YieldRef, Yield, YieldRef, Yield>;
 	using typename meta_t::yield_value_t;
-	using typename meta_t::return_value_t;
 	using typename meta_t::yield_reference_t;
+	using typename meta_t::yield_storage_t;
+	using typename meta_t::yield_expr_t;
+	using typename meta_t::return_value_t;
 	using typename meta_t::return_reference_t;
 
-	std::variant<std::monostate, yield_value_t> value;
+	std::variant<std::monostate, return_value_t> value;
 
-	constexpr auto yield_value(yield_value_t ret) noexcept(std::is_nothrow_move_constructible_v<yield_value_t>) -> std::suspend_always
-	requires (std::is_move_constructible_v<yield_value_t> || std::is_copy_constructible_v<yield_value_t>)
+	constexpr void return_value(return_value_t ret) noexcept(std::is_nothrow_move_constructible_v<return_value_t>)
+	requires (std::is_move_constructible_v<return_value_t> || std::is_copy_constructible_v<return_value_t>)
 	{
 		value.template emplace<1>(std::move(ret));
+	}
+
+	template <std::convertible_to<return_value_t> U>
+	constexpr void return_value(U&& ret) noexcept(std::is_nothrow_constructible_v<return_value_t, U>)
+	{
+		value.template emplace<1>(std::forward<U>(ret));
+	}
+
+	constexpr auto yield_value(yield_expr_t& ret) noexcept(std::is_nothrow_copy_constructible_v<yield_value_t>) -> awaiter
+		requires (std::is_copy_constructible_v<yield_value_t>)
+	{
+		if constexpr (std::is_reference_v<yield_value_t>)
+		{
+			value.template emplace<1>(&ret);
+		}
+		else
+		{
+			value.template emplace<1>(ret);
+		}
+		return {};
+	}
+
+	constexpr auto yield_value(yield_expr_t&& ret) noexcept(std::is_nothrow_move_constructible_v<yield_value_t>) -> awaiter
+		requires (std::is_move_constructible_v<yield_value_t>)
+	{
+		if constexpr (std::is_reference_v<yield_value_t>)
+		{
+			value.template emplace<1>(&ret);
+		}
+		else
+		{
+			value.template emplace<1>(std::move(ret));
+		}
 		return {};
 	}
 
 	template <std::convertible_to<yield_value_t> U>
-	constexpr auto yield_value(U&& ret) noexcept(std::is_nothrow_constructible_v<yield_value_t, U>) -> std::suspend_always
+		requires (!std::is_reference_v<yield_value_t>)
+	constexpr auto yield_value(U&& ret) noexcept(std::is_nothrow_constructible_v<yield_value_t, U>) -> awaiter
 	{
 		value.template emplace<1>(std::forward<U>(ret));
 		return {};
 	}
 
+	constexpr void clear()
+	{
+		value.template emplace<0>();
+	}
+};
+
+template <typename ReturnRef, typename Return>
+struct state_machine_storage<void, void, ReturnRef, Return> : state_machine_common, state_machine_meta<void, void, ReturnRef, Return>
+{
+	using meta_t = state_machine_meta<void, void, ReturnRef, Return>;
+	using typename meta_t::yield_value_t;
+	using typename meta_t::yield_reference_t;
+	using typename meta_t::yield_storage_t;
+	using typename meta_t::yield_expr_t;
+	using typename meta_t::return_value_t;
+	using typename meta_t::return_reference_t;
+
+	std::variant<std::monostate, return_value_t> value;
+
+	constexpr void return_value(return_value_t ret) noexcept(std::is_nothrow_move_constructible_v<return_value_t>)
+	requires (std::is_move_constructible_v<return_value_t> || std::is_copy_constructible_v<return_value_t>)
+	{
+		value.template emplace<1>(std::move(ret));
+	}
+
+	template <std::convertible_to<return_value_t> U>
+	constexpr void return_value(U&& ret) noexcept(std::is_nothrow_constructible_v<return_value_t, U>)
+	{
+		value.template emplace<1>(std::forward<U>(ret));
+	}
+
+	constexpr void clear()
+	{
+		value.template emplace<0>();
+	}
+};
+
+template <typename YieldRef, typename Yield>
+struct state_machine_storage<YieldRef, Yield, void, void> : state_machine_common, state_machine_meta<YieldRef, Yield, void, void>
+{
+	using meta_t = state_machine_meta<YieldRef, Yield, void, void>;
+	using typename meta_t::yield_value_t;
+	using typename meta_t::yield_reference_t;
+	using typename meta_t::yield_storage_t;
+	using typename meta_t::return_value_t;
+	using typename meta_t::return_reference_t;
+
+	std::variant<std::monostate, yield_storage_t> value;
+
+	constexpr auto yield_value(yield_value_t ret) noexcept(std::is_nothrow_move_constructible_v<yield_value_t>) -> awaiter
+	requires (std::is_move_constructible_v<yield_value_t> || std::is_copy_constructible_v<yield_value_t>)
+	{
+		if constexpr (std::is_reference_v<yield_value_t>)
+		{
+			value.template emplace<1>(&ret);
+		}
+		else
+		{
+			value.template emplace<1>(std::move(ret));
+		}
+		return {};
+	}
+
+	template <std::convertible_to<yield_value_t> U>
+		requires (!std::is_reference_v<yield_value_t>)
+	constexpr auto yield_value(U&& ret) noexcept(std::is_nothrow_constructible_v<yield_value_t, U>) -> awaiter
+	{
+		value.template emplace<1>(std::forward<U>(ret));
+		return {};
+	}
+
+	constexpr void clear()
+	{
+		value.template emplace<0>();
+	}
+
 	constexpr void return_void() const noexcept {}
 };
 
-template <typename YieldRef, typename ReturnRef, typename Yield, typename Return, typename Allocator>
-struct state_machine_promise : state_machine_storage<YieldRef, ReturnRef, Yield, Return>
+template <>
+struct state_machine_storage<void, void, void, void> : state_machine_common, state_machine_meta<void, void, void, void>
+{
+	using meta_t = state_machine_meta<void, void, void, void>;
+	using typename meta_t::yield_value_t;
+	using typename meta_t::return_value_t;
+	using typename meta_t::yield_reference_t;
+	using typename meta_t::return_reference_t;
+
+	static constexpr auto yield_value(std::monostate = {}) noexcept -> std::suspend_always
+	{
+		return {};
+	}
+
+	static constexpr void clear() noexcept
+	{
+	}
+
+	static constexpr void return_void() noexcept {}
+};
+
+template <typename YieldRef, typename Yield, typename ReturnRef, typename Return, typename Allocator>
+struct state_machine_promise : state_machine_storage<YieldRef, Yield, ReturnRef, Return>
 {
 	/*
 	alignas(__STDCPP_DEFAULT_NEW_ALIGNMENT__) struct U // https://en.cppreference.com/w/cpp/coroutine/generator/promise_type/operator_new
@@ -508,7 +799,7 @@ struct state_machine_promise : state_machine_storage<YieldRef, ReturnRef, Yield,
 
 	constexpr auto get_return_object()
 	{
-		return basic_state_machine<YieldRef, ReturnRef, Yield, Return> { std::coroutine_handle<state_machine_promise>::from_promise(*this) };
+		return basic_state_machine<YieldRef, Yield, ReturnRef, Return> { std::coroutine_handle<state_machine_promise>::from_promise(*this) };
 	}
 };
 

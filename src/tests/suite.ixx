@@ -50,7 +50,7 @@ public:
 
 	void fail(std::string reason = {}, const std::source_location &where = std::source_location::current());
 	void success();
-	void skip();
+	void skip(std::string reason = {}, const std::source_location &where = std::source_location::current());
 	void run();
 
 	status get_status() const noexcept;

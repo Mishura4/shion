@@ -1,11 +1,5 @@
 cmake_minimum_required(VERSION 3.31)
 
-if (CMAKE_VERSION VERSION_GREATER_EQUAL 4.0.0)
-	set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "a9e1cf81-9932-4810-974b-6eccaf14e457")
-elseif (CMAKE_VERSION VERSION_GREATER_EQUAL 3.30)
-	set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "0e5b6991-d74f-4b3d-a41c-cf096e0b2508")
-endif ()
-
 project(shion LANGUAGES CXX)
 
 include(cmake/AddStdModule.cmake)
@@ -15,7 +9,6 @@ option(SHION_IMPORT_STD "Whether to use `import std;` when building the library 
 option(SHION_BUILD_TESTS "Whether to build the tests" on)
 set(SHION_STD_MODULE_LOCATION "" CACHE STRING "Specify a custom location for the std module, or build it if empty")
 
-set(SHION_BUILD_TESTS on)
 set(CMAKE_CXX_STANDARD 23)
 
 if (LINUX)
@@ -50,7 +43,7 @@ set(SHION_STATIC_LIBRARY ${SHION_BUILD_STATIC} CACHE BOOL "Whether to build shio
 set(SHION_MODULE_LIBRARY ${SHION_BUILD_MODULES} CACHE BOOL "Whether to build shion as a module library")
 set(SHION_SHARED_LIBRARY ${BUILD_SHARED_LIBS} CACHE BOOL "Whether to build shion as a shared library")
 
-set(SHION_SHARED_LIBRARY on)
+set(SHION_SHARED_LIBRARY off)
 set(SHION_STATIC_LIBRARY on)
 
 set(SHION_PRIVATE_BUILD_OPTIONS "")
@@ -60,14 +53,21 @@ set(SHION_PUBLIC_BUILD_DEFINITIONS "")
 
 if (MSVC)
 	set(SHION_PRIVATE_BUILD_OPTIONS ${SHION_PRIVATE_BUILD_OPTIONS}
-		/W4 /utf-8 /permissive-
+		/utf-8 /permissive-
+
+		# Warnings as errors
+		/W4
+		/we4033 # error C4033: 'meow' must return a value
 	)
 	set(SHION_PRIVATE_BUILD_DEFINITIONS ${SHION_PRIVATE_BUILD_DEFINITIONS}
 		NOMINMAX
 	)
 	set(SHION_PUBLIC_BUILD_OPTIONS ${SHION_PUBLIC_BUILD_OPTIONS}
-		/wd4251 # 'meow' must have DLL_EXPORT attribute to be used by 'bork'
 		/permissive-
+
+		# Disabling warnings
+		/wd4251 # 'meow' must have DLL_EXPORT attribute to be used by 'bork'
+
 	)
 	if (NOT CLANG_CL)
 		set(SHION_PUBLIC_BUILD_OPTIONS ${SHION_PUBLIC_BUILD_OPTIONS} /Zc:preprocessor)
@@ -112,27 +112,29 @@ endif ()
 
 if (SHION_IMPORT_STD)
 	set(SHION_PRIVATE_BUILD_DEFINITIONS ${SHION_PRIVATE_BUILD_DEFINITIONS} SHION_IMPORT_STD=1)
-	if (NOT SHION_USE_CMAKE_IMPORT_STD AND NOT SHION_STD_MODULE_TARGET)
-		AddStdModule(shion_std_module)
-		set(SHION_STD_MODULE_TARGET shion_std_module)
+	if (NOT SHION_USE_CMAKE_IMPORT_STD)
+		if (NOT SHION_STD_MODULE_TARGET)
+			AddStdModule(shion_std_module)
+			set(SHION_STD_MODULE_TARGET shion_std_module)
 
-		target_compile_features(shion_std_module PUBLIC cxx_std_23)
+			target_compile_features(shion_std_module PUBLIC cxx_std_23)
 
-		install(TARGETS shion_std_module
-			EXPORT shion_std_module
-			RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-			LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-			ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-			INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-			FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-			FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-		)
+			install(TARGETS shion_std_module
+					EXPORT shion_std_module
+					RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+					LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+					ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+					INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+					FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+					FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+			)
 
-		install(EXPORT shion_std_module
-			DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/shion
-			NAMESPACE shion::
-			CXX_MODULES_DIRECTORY modules
-		)
+			install(EXPORT shion_std_module
+					DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/shion
+					NAMESPACE shion::
+					CXX_MODULES_DIRECTORY modules
+			)
+		endif ()
 	else()
 		set(CMAKE_CXX_MODULE_STD 1)
 	endif ()
@@ -167,7 +169,7 @@ function(create_library lib bin type)
 	endif ()
 
 	if (SHION_STD_MODULE_TARGET)
-		target_link_libraries(shion-${lib} PUBLIC ${SHION_STD_MODULE_TARGET})
+		target_link_libraries(shion-${lib} PRIVATE ${SHION_STD_MODULE_TARGET})
 	endif ()
 
 	if (SHION_BUILD_MODULES)

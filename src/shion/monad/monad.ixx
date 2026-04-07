@@ -2,12 +2,14 @@ module;
 
 #include <shion/export.hpp>
 #include <shion/common/defines.hpp>
+#include <shion/meta/macros.hpp>
 
 #if !SHION_IMPORT_STD
 #include <functional>
 #include <utility>
 #include <type_traits>
 #include <concepts>
+#include <tuple>
 #endif
 
 export module shion:monad;
@@ -17,6 +19,7 @@ import std;
 #endif
 
 import :common;
+import :meta;
 
 using namespace SHION_NAMESPACE ::literals;
 

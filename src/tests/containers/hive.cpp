@@ -14,9 +14,7 @@ module;
 
 module shion.tests;
 
-#if SHION_MODULES
 import shion;
-#endif
 
 namespace shion::tests {
 

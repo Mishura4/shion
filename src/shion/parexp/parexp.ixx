@@ -9,7 +9,6 @@ module;
 #include <concepts>
 #include <utility>
 #include <array>
-#include <functional>
 #endif
 
 export module shion:parexp;

@@ -165,9 +165,9 @@
 		}
 #	endif 
 #else
-#	define SHION_ASSERT(a, ...) if (a) {} else { SHION_NAMESPACE ::unreachable() } static_assert(true)
+#	define SHION_ASSERT(a, ...) if (a) {} else { SHION_NAMESPACE ::unreachable(); } static_assert(true)
 #endif
 
-
+#define SHION_ASSUME(cond) SHION_ASSERT(cond)
 
 #endif /* SHION_BASE_H_ */

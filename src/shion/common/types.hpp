@@ -24,25 +24,26 @@ using ulong = unsigned long;
 using ushort = unsigned short;
 using ull = unsigned long long;
 
-using uint8 = uint8_t;
-using uint16 = uint16_t;
-using uint32 = uint32_t;
-using uint64 = uint64_t;
-using int8 = int8_t;
-using int16 = int16_t;
-using int32 = int32_t;
-using int64 = int64_t;
+using uint8 = std::uint8_t;
+using uint16 = std::uint16_t;
+using uint32 = std::uint32_t;
+using uint64 = std::uint64_t;
+using int8 = std::int8_t;
+using int16 = std::int16_t;
+using int32 = std::int32_t;
+using int64 = std::int64_t;
 
-using u8 = uint8_t;
-using u16 = uint16_t;
-using u32 = uint32_t;
-using u64 = uint64_t;
-using i8 = int8_t;
-using i16 = int16_t;
-using i32 = int32_t;
-using i64 = int64_t;
+using u8 = std::uint8_t;
+using u16 = std::uint16_t;
+using u32 = std::uint32_t;
+using u64 = std::uint64_t;
+using i8 = std::int8_t;
+using i16 = std::int16_t;
+using i32 = std::int32_t;
+using i64 = std::int64_t;
+using intptr = std::intptr_t;
 
-using std::size_t;
+using size_t = std::size_t;
 
 using app_clock = std::chrono::steady_clock;
 using app_time = app_clock::time_point;
@@ -120,8 +121,6 @@ struct uninitialized_t {};
 
 inline constexpr auto uninitialized = uninitialized_t{};
 
-template <typename... Args>
-struct tuple;
 // I really don't want to put this here, but because MSVC struggles to
 // export partial specializations of third-party types,
 // std::tuple_size<shion::tuple<...>> isn't exported.

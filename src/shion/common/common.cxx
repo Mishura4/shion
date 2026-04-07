@@ -3,6 +3,10 @@ module;
 #include <shion/export.hpp>
 #include <shion/common/defines.hpp>
 
+#if _WIN32
+	#include <Windows.h>
+#endif
+
 #if !SHION_IMPORT_STD
 #include <cstdlib>
 #include <filesystem>

@@ -29,8 +29,8 @@ inline constexpr char* to_hex(char* buf, const unsigned char* val, size_t n) noe
 {
 	for (size_t i = 0; i < n; ++i)
 	{
-		uint8_t high = (val[i] >> 4);
-		uint8_t low = val[i] & 0x0F;
+		uint8 high = (val[i] >> 4);
+		uint8 low = val[i] & 0x0F;
 	
 		buf[i * 2] = high >= 10 ? 'a' + high : '0' + high;
 		buf[i * 2 + 1] = low >= 10 ? 'a' + low : '0' + low;
@@ -43,8 +43,8 @@ inline constexpr char* to_hex(char* buf, const std::byte* val, size_t n) noexcep
 	for (size_t i = 0; i < n; ++i)
 	{
 		auto value = static_cast<unsigned char>(val[i]);
-		uint8_t high = (value >> 4);
-		uint8_t low = value & 0x0F;
+		uint8 high = (value >> 4);
+		uint8 low = value & 0x0F;
 	
 		buf[i * 2] = high >= 10 ? 'a' - 10 + high : '0' + high;
 		buf[i * 2 + 1] = low >= 10 ? 'a' - 10 + low : '0' + low;
@@ -55,7 +55,7 @@ inline constexpr char* to_hex(char* buf, const std::byte* val, size_t n) noexcep
 class uuid
 {
 public:
-	static_assert(sizeof(uint64_t) == 8 && alignof(uint64_t) == 8);
+	static_assert(sizeof(uint64) == 8 && alignof(uint64) == 8);
 
 	constexpr uuid() = default;
 	constexpr uuid(const uuid&) noexcept = default;
@@ -77,7 +77,7 @@ public:
 	{
 		uuid ret;
 
-		std::ranges::fill(ret._bytes, static_cast<std::byte>(std::numeric_limits<uint8_t>::max()));
+		std::ranges::fill(ret._bytes, static_cast<std::byte>(std::numeric_limits<uint8>::max()));
 		return ret;
 	}
 
@@ -149,7 +149,7 @@ public:
 	static constexpr uuid generate_v4() noexcept
 	{
 		if (std::is_constant_evaluated()) {
-			return generate_v4([]() constexpr -> uint64_t { return 0x7844784478447844; });
+			return generate_v4([]() constexpr -> uint64 { return 0x7844784478447844; });
 		} else {
 			thread_local std::mt19937_64 engine{
 				std::chrono::high_resolution_clock::now().time_since_epoch().count()
@@ -163,7 +163,7 @@ public:
 	static constexpr uuid generate_v7() noexcept
 	{
 		if (std::is_constant_evaluated()) {
-			return generate_v7([]() constexpr -> uint64_t { return 0x7844784478447844; }, {});
+			return generate_v7([]() constexpr -> uint64 { return 0x7844784478447844; }, {});
 		} else {
 			thread_local std::mt19937_64 engine{
 				std::chrono::high_resolution_clock::now().time_since_epoch().count()
@@ -227,7 +227,7 @@ public:
 	{
 		if (with_dashes)
 		{
-			if (auto diff = end - first; static_cast<ptrdiff_t>(diff) < 36)
+			if (auto diff = end - first; static_cast<ssize_t>(diff) < 36)
 			{
 				return {first + diff, std::errc::result_out_of_range};
 			}
@@ -249,7 +249,7 @@ public:
 		}
 		else
 		{
-			if (auto diff = end - first; static_cast<ptrdiff_t>(diff) < 32)
+			if (auto diff = end - first; static_cast<ssize_t>(diff) < 32)
 			{
 				return {first + diff, std::errc::result_out_of_range};
 			}

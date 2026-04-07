@@ -4,7 +4,6 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-
 #include <functional>
 #include <type_traits>
 #include <concepts>
@@ -15,7 +14,6 @@
 #include <shion/utility/supplier.hpp>
 #include <shion/monad/invoke.hpp>
 #include <shion/monad/compare.hpp>
-
 #endif
 
 namespace shion

@@ -2,6 +2,7 @@ module;
 
 #include <shion/export.hpp>
 #include <shion/common/defines.hpp>
+#include <shion/meta/macros.hpp>
 
 #if !SHION_IMPORT_STD
 #include <algorithm>
@@ -43,6 +44,7 @@ import :meta;
 
 using namespace SHION_NAMESPACE ::literals;
 
+#include "shion/utility/scope.hpp"
 #include "shion/utility/bit_mask.hpp"
 #include "shion/utility/supplier.hpp"
 #include "shion/utility/tuple.hpp"

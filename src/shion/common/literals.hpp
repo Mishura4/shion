@@ -17,8 +17,7 @@ SHION_EXPORT namespace SHION_NAMESPACE
 
 namespace literals {
 
-using namespace std::string_view_literals;
-using namespace std::chrono_literals;
+using namespace std::literals;
 
 consteval int8 operator""_i8(unsigned long long int lit) {
 	if (lit > lossless_cast<unsigned long long int>((std::numeric_limits<int8>::max)())) {

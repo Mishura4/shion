@@ -17,22 +17,6 @@
 #	define SHION_EXTERN_CPP_END
 #endif
 
-// Include all macros and other things we need here, we are in the global module fragment
-#include <cassert>
-#include <climits>
-#include <cstdlib>
-#include <cstdint>
-#include <cstddef>
-
-#ifdef _WIN32
-#  include <Windows.h>
-#endif
-
 #include <shion/common/defines.hpp>
-
-namespace SHION_NAMESPACE
-{
-
-}
 
 #endif /* SHION_MODULES_H_ */
