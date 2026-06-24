@@ -15,6 +15,7 @@ module;
 #	include <fstream>
 #	include <atomic>
 #	include <version>
+#	include <variant>
 #endif
 
 #include <cstddef>

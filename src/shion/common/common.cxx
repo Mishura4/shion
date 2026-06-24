@@ -13,6 +13,9 @@ module;
 #include <iostream>
 #include <syncstream>
 #include <version>
+#include <source_location>
+#include <ranges>
+#include <algorithm>
 
 #if _WIN32
 #include <Windows.h>

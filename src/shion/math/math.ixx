@@ -11,6 +11,8 @@ module;
 #include <utility>
 #include <new>
 #include <stdexcept>
+#include <type_traits>
+#include <concepts>
 #endif
 
 export module shion:math;
