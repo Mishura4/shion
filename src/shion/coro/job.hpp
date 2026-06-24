@@ -128,7 +128,7 @@ static_assert(is_placeholder_for<job, job_dummy>);
 /**
  * @brief Specialization of std::coroutine_traits, helps the standard library figure out a promise type from a coroutine function.
  */
-SHION_EXPORT template<typename... Args>
+template<typename... Args>
 struct std::coroutine_traits<shion::job, Args...> {
 	/**
 	 * @brief Promise type for this coroutine signature.

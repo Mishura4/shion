@@ -370,7 +370,7 @@ static_assert(is_placeholder_for<task<int>, task_dummy>);
 /**
  * @brief Specialization of std::coroutine_traits, helps the standard library figure out a promise_t type from a coroutine function.
  */
-SHION_EXPORT template<typename T, typename... Args>
+template<typename T, typename... Args>
 struct std::coroutine_traits<shion::task<T>, Args...> {
 	using promise_type = shion::detail::task::promise_t<T>;
 };

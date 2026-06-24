@@ -15,6 +15,27 @@
 
 namespace shion {
 
+SHION_EXPORT struct inconstructible final {
+	inconstructible() = delete;
+	inconstructible(const inconstructible&) = delete;
+	inconstructible(inconstructible&&) = delete;
+	auto& operator=(const inconstructible&) = delete;
+	auto& operator=(inconstructible&&) = delete;
+	~inconstructible() = delete;
+};
+
+SHION_EXPORT template <typename T>
+using non_void = typename std::conditional<std::is_void<T>::value, inconstructible, T>;
+
+SHION_EXPORT template <typename T>
+struct make_complete_t
+{
+	using type = std::conditional_t<std::is_void_v<T>, empty, T>;
+};
+
+SHION_EXPORT template <typename T>
+using make_complete = typename make_complete_t<T>::type;
+
 template <template <class...> class Container>
 constexpr auto to_impl = []<typename Rng, typename... Args>(Rng&& range, Args&&... args) {
 	namespace stdr = std::ranges;
@@ -83,19 +104,19 @@ constexpr auto to(Args&&... args) {
 	}
 }
 
-SHION_EXPORT template <typename T, typename U>
+SHION_EXPORT template <typename To, typename From>
 inline constexpr bool is_compatible_reference = false;
 
-SHION_EXPORT template <typename T, typename U>
+template <typename T, typename U>
 inline constexpr bool is_compatible_reference<T&, U&> = true;
 
-SHION_EXPORT template <typename T, typename U>
+template <typename T, typename U>
 inline constexpr bool is_compatible_reference<const T&, U&> = true;
 
-SHION_EXPORT template <typename T, typename U>
+template <typename T, typename U>
 inline constexpr bool is_compatible_reference<T&&, U&&> = true;
 
-SHION_EXPORT template <typename T, typename U>
+template <typename T, typename U>
 inline constexpr bool is_compatible_reference<const T&&, U&&> = true;
 
 SHION_EXPORT template <std::signed_integral T = int>
@@ -180,6 +201,64 @@ SHION_EXPORT struct rethrow_t
 };
 
 SHION_EXPORT inline constexpr auto rethrow = rethrow_t{};
+
+namespace detail
+{
+
+template <size_t N, typename V>
+constexpr auto do_get(V&& value) -> decltype(auto)
+{
+	using std::get;
+	return get<N>(static_cast<V&&>(value));
+}
+
+template <typename T, typename V>
+constexpr auto do_get(V&& value) -> decltype(auto)
+{
+	using std::get;
+	return get<T>(static_cast<V&&>(value));
+}
+
+template <size_t N, typename V>
+constexpr auto do_get_unchecked(V&& value) -> decltype(auto)
+{
+	return get_unchecked<N>(static_cast<V&&>(value));
+}
+
+template <typename T, typename V>
+constexpr auto do_get_unchecked(V&& value) -> decltype(auto)
+{
+	using std::get;
+	return get_unchecked<T>(static_cast<V&&>(value));
+}
+
+}
+
+template <size_t N, typename V>
+constexpr auto get(V&& value) -> decltype(auto)
+{
+	using std::get;
+	return detail::do_get<N>(static_cast<V&&>(value));
+}
+
+template <typename T, typename V>
+constexpr auto get(V&& value) -> decltype(auto)
+{
+	using std::get;
+	return detail::do_get<T>(static_cast<V&&>(value));
+}
+
+template <size_t N, typename V>
+constexpr auto get_unchecked(V&& value) -> decltype(auto)
+{
+	return detail::do_get_unchecked<N>(static_cast<V&&>(value));
+}
+
+template <typename T, typename V>
+constexpr auto get_unchecked(V&& value) -> decltype(auto)
+{
+	return detail::do_get_unchecked<T>(static_cast<V&&>(value));
+}
 
 }
 

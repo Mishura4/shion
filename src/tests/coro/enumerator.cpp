@@ -33,6 +33,9 @@ namespace shion
 namespace
 {
 
+/**
+ * @brief Infinite fibonacci sequence.
+ */
 auto fibonacci() -> enumerator<int>
 {
 	auto a = 0;
@@ -45,13 +48,16 @@ auto fibonacci() -> enumerator<int>
 	}
 }
 
+/**
+ * @brief Infinite fibonacci sequence, as an enumerable.
+ */
 auto wrapped_fibonacci() -> enumerable<const int&>
 {
 	auto f = fibonacci();
-	while (true)
+	while (auto o = f.next())
 	{
-		auto accessor = co_await f.next();
-		co_yield *accessor;
+		auto&& accessor = co_await *o;
+		co_yield accessor;
 	}
 }
 
@@ -79,9 +85,9 @@ auto access_local() -> enumerator<int&>
 
 auto throws() -> enumerator<int>
 {
-	co_yield 0;
-	throw std::exception{};
 	co_yield 1;
+	throw std::exception{};
+	co_yield 2;
 }
 
 }
@@ -122,17 +128,27 @@ bool tests::enumerator_infinite(test& t)
 bool tests::enumerator_exceptions(test& t)
 {
 	enumerator<int> enumerator = throws();
-	TEST_ASSERT(t, *enumerator == 0);
-	bool threw = false;
+	TEST_ASSERT(t, *enumerator == 1);
+	bool threw_on_get = false;
+	bool threw_on_increment = false;
 	try
 	{
 		++enumerator;
 	}
 	catch (...)
 	{
-		threw = true;
+		threw_on_increment = true;
 	}
-	TEST_ASSERT(t, threw);
+	TEST_ASSERT(t, !threw_on_increment);
+	try
+	{
+		enumerator.get();
+	}
+	catch (...)
+	{
+		threw_on_get = true;
+	}
+	TEST_ASSERT(t, threw_on_get);
 	TEST_ASSERT(t, enumerator.done());
 	return true;
 }

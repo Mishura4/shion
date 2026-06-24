@@ -20,13 +20,13 @@ namespace SHION_NAMESPACE {
 SHION_EXPORT template <typename... Args>
 struct tuple;
 
-SHION_EXPORT template <typename... Args>
+template <typename... Args>
 struct tuple_size_selector<tuple<Args...>>
 {
 	using type = tuple_size<tuple<Args...>>;
 };
 
-SHION_EXPORT template <size_t I, typename... Args>
+template <size_t I, typename... Args>
 struct tuple_element_selector<I, tuple<Args...>>
 {
 	using type = tuple_element<I, tuple<Args...>>;
@@ -86,14 +86,14 @@ struct _tuple_node {
 SHION_EXPORT template <typename T, typename Tuple>
 constexpr inline bool is_piecewise_constructible_v = false;
 
-SHION_EXPORT template <typename T, typename Tuple>
+template <typename T, typename Tuple>
 	requires requires { tuple_size_selector<Tuple>::type::value; }
 constexpr inline bool is_piecewise_constructible_v<T, Tuple> = detail::is_piecewise_constructible_impl<T, Tuple, std::make_index_sequence<tuple_size_selector<Tuple>::type::value>>;
 
 SHION_EXPORT template <typename T, typename Tuple>
 constexpr inline bool is_nothrow_piecewise_constructible_v = false;
 
-SHION_EXPORT template <typename T, typename Tuple>
+template <typename T, typename Tuple>
 	requires requires { tuple_size_selector<Tuple>::type::value; }
 constexpr inline bool is_nothrow_piecewise_constructible_v<T, Tuple> = detail::is_nothrow_piecewise_constructible_impl<T, Tuple, std::make_index_sequence<tuple_size_selector<Tuple>::type::value>>;
 
@@ -495,13 +495,13 @@ constexpr auto forward_as_tuple(Ts&&... args) noexcept {
 
 }
 
-SHION_EXPORT template <std::size_t I, typename... Args>
+template <std::size_t I, typename... Args>
 requires (I <= sizeof...(Args))
 struct std::tuple_element<I, SHION_NAMESPACE :: tuple<Args...>> : SHION_NAMESPACE :: tuple_element<I, SHION_NAMESPACE :: tuple<Args...>>
 {
 };
 
-SHION_EXPORT template <typename... Args>
+template <typename... Args>
 struct std::tuple_size<SHION_NAMESPACE :: tuple<Args...>> : SHION_NAMESPACE :: tuple_size<SHION_NAMESPACE :: tuple<Args...>>
 {
 };

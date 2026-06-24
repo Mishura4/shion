@@ -48,7 +48,7 @@ public:
 		constexpr destroyer(const destroyer&) = delete;
 		constexpr destroyer(destroyer&&) = delete;
 		constexpr destroyer(allocator& alloc, node* init) :
-			allocator{ &alloc },
+			my_allocator{ &alloc },
 			current{ init }
 		{
 		}
@@ -56,7 +56,7 @@ public:
 		constexpr auto operator=(const destroyer&) -> destroyer& = delete;
 		constexpr auto operator=(destroyer&&) -> destroyer& = delete;
 
-		SHION_NO_UNIQUE_ADDRESS allocator* allocator;
+		SHION_NO_UNIQUE_ADDRESS allocator* my_allocator;
 		node*                              current;
 
 		constexpr void operator()() noexcept
@@ -70,8 +70,8 @@ public:
 		constexpr void advance() noexcept
 		{
 			node* next = current->next;
-			alloctraits::destroy(*allocator, current);
-			alloctraits::deallocate(*allocator, current, 1);
+			alloctraits::destroy(*my_allocator, current);
+			alloctraits::deallocate(*my_allocator, current, 1);
 			current = next;
 		}
 

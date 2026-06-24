@@ -1,8 +1,10 @@
 #pragma once
 
 #include "coro/coro.hpp"
-#include "coro/promise.hpp"
+#include "coro/promise2.hpp"
 #include "coro/awaitable.hpp"
+#include "coro/enumerator.hpp"
+/*
 #include "coro/async.hpp"
 #include "coro/coroutine.hpp"
 #include "coro/job.hpp"
@@ -10,4 +12,8 @@
 #include "coro/when_any.hpp"
 #include "coro/state_machine.hpp"
 #include "coro/event_hook.hpp"
-#include "coro/enumerator.hpp"
+*/
+#if defined(__RESHARPER__)
+#include <type_traits>
+#include <utility>
+#endif

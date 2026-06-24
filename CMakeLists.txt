@@ -6,6 +6,10 @@ include(cmake/AddStdModule.cmake)
 
 option(SHION_BUILD_MODULES "Whether to build the library as a module" on)
 option(SHION_IMPORT_STD "Whether to use `import std;` when building the library modules" on)
+option(SHION_BUILD_CONCURRENCY "Whether to build the concurrency part of the library" on)
+option(SHION_BUILD_CORO "Whether to build the coroutine part of the library" on)
+option(SHION_BUILD_IO "Whether to build the I/O part of the library" on)
+option(SHION_BUILD_CONTAINERS "Whether to build the containers part of the library" on)
 option(SHION_BUILD_TESTS "Whether to build the tests" on)
 set(SHION_STD_MODULE_LOCATION "" CACHE STRING "Specify a custom location for the std module, or build it if empty")
 
@@ -38,7 +42,6 @@ else ()
 	set(SHION_BUILD_STATIC on)
 endif ()
 
-
 set(SHION_STATIC_LIBRARY ${SHION_BUILD_STATIC} CACHE BOOL "Whether to build shion as a static library")
 set(SHION_MODULE_LIBRARY ${SHION_BUILD_MODULES} CACHE BOOL "Whether to build shion as a module library")
 set(SHION_SHARED_LIBRARY ${BUILD_SHARED_LIBS} CACHE BOOL "Whether to build shion as a shared library")
@@ -46,23 +49,23 @@ set(SHION_SHARED_LIBRARY ${BUILD_SHARED_LIBS} CACHE BOOL "Whether to build shion
 set(SHION_SHARED_LIBRARY off)
 set(SHION_STATIC_LIBRARY on)
 
-set(SHION_PRIVATE_BUILD_OPTIONS "")
-set(SHION_PUBLIC_BUILD_OPTIONS "")
-set(SHION_PRIVATE_BUILD_DEFINITIONS "")
-set(SHION_PUBLIC_BUILD_DEFINITIONS "")
+add_library(shion_public_options INTERFACE EXCLUDE_FROM_ALL)
+add_library(shion_build_options INTERFACE EXCLUDE_FROM_ALL)
+
+target_link_libraries(shion_build_options INTERFACE shion_public_options)
 
 if (MSVC)
-	set(SHION_PRIVATE_BUILD_OPTIONS ${SHION_PRIVATE_BUILD_OPTIONS}
+	target_compile_options(shion_build_options INTERFACE
 		/utf-8 /permissive-
 
 		# Warnings as errors
 		/W4
 		/we4033 # error C4033: 'meow' must return a value
 	)
-	set(SHION_PRIVATE_BUILD_DEFINITIONS ${SHION_PRIVATE_BUILD_DEFINITIONS}
+	target_compile_definitions(shion_build_options INTERFACE
 		NOMINMAX
 	)
-	set(SHION_PUBLIC_BUILD_OPTIONS ${SHION_PUBLIC_BUILD_OPTIONS}
+	target_compile_options(shion_public_options INTERFACE
 		/permissive-
 
 		# Disabling warnings
@@ -70,22 +73,22 @@ if (MSVC)
 
 	)
 	if (NOT CLANG_CL)
-		set(SHION_PUBLIC_BUILD_OPTIONS ${SHION_PUBLIC_BUILD_OPTIONS} /Zc:preprocessor)
+		target_compile_options(shion_public_options INTERFACE /Zc:preprocessor)
 	endif()
 elseif (UNIX)
-	set(SHION_PRIVATE_BUILD_OPTIONS ${SHION_PRIVATE_BUILD_OPTIONS} -Wall -Wextra -pedantic -pedantic-errors)
+	target_compile_options(shion_build_options INTERFACE -Wall -Wextra -pedantic -pedantic-errors)
 endif ()
 
 if (SHION_BUILD_MODULES)
 	set(SHION_BUILD_MODULES on)
 	set(CMAKE_CXX_SCAN_FOR_MODULES on)
 	if (SHION_EXTERN_MODULES)
-		set(SHION_PUBLIC_BUILD_DEFINITIONS ${SHION_PUBLIC_BUILD_DEFINITIONS} SHION_EXTERN_MODULES)
+		target_compile_definitions(shion_public_options INTERFACE SHION_EXTERN_MODULES)
 	endif ()
 endif()
 
 if (UNIX OR CLANG_CL)
-	set(SHION_PRIVATE_BUILD_OPTIONS ${SHION_PRIVATE_BUILD_OPTIONS} "-Wno-unknown-attributes" "-Wno-c++98-compat")
+	target_compile_options(shion_build_options INTERFACE "-Wno-unknown-attributes" "-Wno-c++98-compat")
 endif ()
 
 
@@ -111,13 +114,15 @@ if (NOT DEFINED CMAKE_INSTALL_LIBDIR)
 endif ()
 
 if (SHION_IMPORT_STD)
-	set(SHION_PRIVATE_BUILD_DEFINITIONS ${SHION_PRIVATE_BUILD_DEFINITIONS} SHION_IMPORT_STD=1)
+	target_compile_definitions(shion_build_options INTERFACE SHION_IMPORT_STD=1)
 	if (NOT SHION_USE_CMAKE_IMPORT_STD)
 		if (NOT SHION_STD_MODULE_TARGET)
 			AddStdModule(shion_std_module)
 			set(SHION_STD_MODULE_TARGET shion_std_module)
 
 			target_compile_features(shion_std_module PUBLIC cxx_std_23)
+			target_link_libraries(shion_std_module PUBLIC shion_public_options)
+			target_link_libraries(shion_std_module PRIVATE shion_build_options)
 
 			install(TARGETS shion_std_module
 					EXPORT shion_std_module
@@ -144,13 +149,11 @@ function(create_library lib bin type)
 	add_library(shion-${lib} ${type})
 	set_target_properties(shion-${lib} PROPERTIES OUTPUT_NAME ${bin})
 
-	target_compile_options(shion-${lib} PRIVATE ${SHION_PRIVATE_BUILD_OPTIONS})
-	target_compile_options(shion-${lib} PUBLIC ${SHION_PUBLIC_BUILD_OPTIONS})
+	target_link_libraries(shion-${lib} PUBLIC shion_public_options)
+	target_link_libraries(shion-${lib} PRIVATE shion_build_options)
 	target_compile_definitions(shion-${lib} PRIVATE
-		${SHION_PRIVATE_BUILD_DEFINITIONS}
 		SHION_BUILD SHION_BUILD_ROOT="${CMAKE_SOURCE_DIR}"
 	)
-	target_compile_definitions(shion-${lib} PUBLIC ${SHION_PUBLIC_BUILD_DEFINITIONS})
 	target_include_directories(shion-${lib}
 		PUBLIC
 			"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>"
@@ -199,7 +202,7 @@ function(create_library lib bin type)
 		)
 	endif ()
 
-	install(TARGETS shion-${lib}
+	install(TARGETS shion-${lib} shion_build_options shion_public_options
 		EXPORT shion-${lib}
 		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -241,10 +244,7 @@ if (SHION_BUILD_TESTS)
 		target_compile_features(tests PUBLIC cxx_std_23)
 		target_link_libraries(tests PUBLIC shion::shion)
 
-		target_compile_options(tests PRIVATE ${SHION_PRIVATE_BUILD_OPTIONS})
-		target_compile_options(tests PUBLIC ${SHION_PUBLIC_BUILD_OPTIONS})
-		target_compile_definitions(tests PRIVATE ${SHION_PRIVATE_BUILD_DEFINITIONS})
-		target_compile_definitions(tests PUBLIC ${SHION_PUBLIC_BUILD_DEFINITIONS})
+		target_link_libraries(tests PRIVATE shion_build_options)
 		target_include_directories(tests PUBLIC ${SHION_HEADERS_DIR})
 
 		target_sources(tests PRIVATE ${SHION_TESTS_SOURCES})

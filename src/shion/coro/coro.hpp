@@ -6,6 +6,23 @@
 #  include <shion/common.hpp>
 #endif
 
+namespace SHION_NAMESPACE
+{
+
+namespace coro
+{
+
+}
+
+namespace detail::coro
+{
+
+using namespace shion::coro;
+
+}
+
+}
+
 namespace SHION_NAMESPACE {
 
 /**
@@ -144,7 +161,7 @@ class awaitable_impl;
 
 }
 
-inline namespace coro
+namespace coro::legacy
 {
 
 SHION_EXPORT template <typename Reference, typename Value = void>
@@ -155,17 +172,37 @@ class async_single_promise;
 
 }
 
+namespace coro
+{
+
 /**
  * @brief Generic awaitable class, represents a future value that can be co_await-ed on.
  *
  * Roughly equivalent of std::future for coroutines, with the crucial distinction that the future does not own a reference to a "shared state".
  * It holds a non-owning reference to the promise, which must be kept alive for the entire lifetime of the awaitable.
  *
- * @tparam T Type of the asynchronous value
+ * @tparam Ref Type of the returned value
+ * @tparam StateHolder Container for the promise state, for example, a shared_ptr or a coroutine_handle to a promise.
  * @see promise
 */
-template <typename Reference, typename Value = void>
+SHION_EXPORT template <typename Ref, typename StateHolder>
 class basic_awaitable;
+
+/**
+ * @brief Generic coroutine type, represents a coroutine that can be co_await-ed on.
+ * 
+ * In practice this is just a specialization of basic_awaitable where the state holder is a coroutine handle, for convenience.
+ * 
+ * @tparam Ref Type of the returned value
+ * @tparam Promise Coroutine promise type.
+ */
+SHION_EXPORT template <typename Ref, typename Promise>
+class basic_coroutine;
+
+}
+
+SHION_EXPORT using coro::basic_awaitable;
+SHION_EXPORT using coro::basic_coroutine;
 
 /**
  * @brief Generic awaitable class, represents a future value that can be co_await-ed on.
@@ -191,5 +228,7 @@ using awaitable = async_awaitable<Reference, Value>;
 template <typename T>
 inline int coro_alloc_count = 0;
 #endif
+
+SHION_EXPORT using namespace coro::legacy;
 
 } // namespace shion

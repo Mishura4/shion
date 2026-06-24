@@ -23,6 +23,7 @@ import std;
 
 import shion;
 
+/*
 namespace shion
 {
 
@@ -140,3 +141,4 @@ bool tests::state_machine_continuation(test& t)
 }
 
 }
+*/

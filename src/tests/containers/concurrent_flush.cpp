@@ -75,9 +75,9 @@ bool tests::concurrent_flush_state_machine(test& t)
 	flush.push(second);
 	flush.push(third);
 	auto machine = flush.pop();
-	auto enumerable = std::move(machine);
-	TEST_ASSERT(t, std::ranges::equal(enumerable, std::array{ first, second, third }));
-	enumerable = {};
+	//auto enumerable = std::move(machine);
+	TEST_ASSERT(t, std::ranges::equal(machine, std::array{ first, second, third }));
+	machine = {};
 	return true;
 }
 

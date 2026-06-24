@@ -14,9 +14,7 @@
 namespace SHION_NAMESPACE
 {
 
-SHION_EXPORT_START
-
-template <typename T, template<typename ...> class Of>
+SHION_EXPORT template <typename T, template<typename ...> class Of>
 inline constexpr bool is_specialization_v = false;
 
 template <typename T, template<typename ...> class Of>
@@ -25,16 +23,16 @@ inline constexpr bool is_specialization_v<const T, Of> = is_specialization_v<T, 
 template <template<typename ...> class Of, typename ...Ts>
 inline constexpr bool is_specialization_v<Of<Ts...>, Of> = true;
 
-template <typename T, template<typename ...> class Of>
+SHION_EXPORT template <typename T, template<typename ...> class Of>
 using is_specialization_of = std::bool_constant<is_specialization_v<T, Of>>;
 
-template <typename T>
+SHION_EXPORT template <typename T>
 inline constexpr bool is_optional = false;
 
 template <typename T>
 inline constexpr bool is_optional<std::optional<T>> = true;
 
-enum class value_type {
+SHION_EXPORT enum class value_type {
 	value,
 	const_value,
 	lvalue_reference,
@@ -43,7 +41,7 @@ enum class value_type {
 	const_rvalue_reference
 };
 
-template <value_type>
+SHION_EXPORT template <value_type>
 inline constexpr bool is_reference_type = false;
 
 template <>
@@ -58,7 +56,7 @@ inline constexpr bool is_reference_type<value_type::rvalue_reference> = true;
 template <>
 inline constexpr bool is_reference_type<value_type::const_rvalue_reference> = true;
 
-template <value_type>
+SHION_EXPORT template <value_type>
 inline constexpr bool is_value_type = false;
 
 template <>
@@ -67,7 +65,7 @@ inline constexpr bool is_value_type<value_type::value> = true;
 template <>
 inline constexpr bool is_value_type<value_type::const_value> = true;
 
-template <value_type>
+SHION_EXPORT template <value_type>
 inline constexpr bool is_lvalue_reference_type = false;
 
 template <>
@@ -76,7 +74,7 @@ inline constexpr bool is_lvalue_reference_type<value_type::lvalue_reference> = t
 template <>
 inline constexpr bool is_lvalue_reference_type<value_type::const_lvalue_reference> = true;
 
-template <value_type>
+SHION_EXPORT template <value_type>
 inline constexpr bool is_rvalue_reference_type = false;
 
 template <>
@@ -85,13 +83,13 @@ inline constexpr bool is_rvalue_reference_type<value_type::rvalue_reference> = t
 template <>
 inline constexpr bool is_lvalue_reference_type<value_type::const_rvalue_reference> = true;
 
-template <value_type>
+SHION_EXPORT template <value_type>
 inline constexpr bool is_const_type = false;
 
 template <>
 inline constexpr bool is_const_type<value_type::const_value> = true;
 
-template <value_type Type>
+SHION_EXPORT template <value_type Type>
 decltype(auto) forward_like_type(auto& value) noexcept {
 	using provided_t = decltype(value);
 	using value_t = std::remove_reference_t<provided_t>;
@@ -113,36 +111,35 @@ decltype(auto) forward_like_type(auto& value) noexcept {
 	}
 }
 
-template <typename T>
+SHION_EXPORT template <typename T>
 inline constexpr bool is_copyable = std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>;
 
-template <typename T>
+SHION_EXPORT template <typename T>
 inline constexpr bool is_moveable = std::is_move_constructible_v<T> && std::is_move_assignable_v<T>;
 
-template <typename T>
+SHION_EXPORT template <typename T>
 inline constexpr bool is_nothrow_copyable = std::is_nothrow_copy_constructible_v<T> && std::is_nothrow_copy_assignable_v<T>;
 
-template <typename T>
+SHION_EXPORT template <typename T>
 inline constexpr bool is_nothrow_moveable = std::is_nothrow_move_constructible_v<T> && std::is_nothrow_move_assignable_v<T>;
 
-template <typename T, typename U>
+SHION_EXPORT template <typename T, typename U>
 inline constexpr bool is_placeholder_for = alignof(T) == alignof(U) && sizeof(T) == sizeof(U);
 
-template <typename T>
+SHION_EXPORT template <typename T>
 inline constexpr bool is_allocator_v = requires { typename std::allocator_traits<T>::allocator_type; };
 
 #if defined(__cpp_lib_is_implicit_lifetime) and (__cpp_lib_is_implicit_lifetime >= 202302L)
-template <typename T>
-inline constexpr bool is_implicit_lifetime_v = std::is_implicit_lifetime_v<T>;
+SHION_EXPORT using std::is_implicit_lifetime_v;
 #elif SHION_HAS_BUILTIN(__builtin_is_implicit_lifetime)
-template <typename T>
+SHION_EXPORT template <typename T>
 inline constexpr bool is_implicit_lifetime_v = __builtin_is_implicit_lifetime(T);
 #else
 // We cannot do this without compiler builtins. But we can approximate, maybe.
 // The important part is we don't want false positives.
 // False negatives are okay, just a missed optimization.
 
-template <typename T>
+SHION_EXPORT template <typename T>
 inline constexpr bool is_implicit_lifetime_v = false;
 
 template <typename T>
@@ -158,8 +155,6 @@ requires (std::is_class_v<T>)
 inline constexpr bool is_implicit_lifetime_v<T> = 
 	(std::is_aggregate_v<T> && std::is_trivially_destructible_v<T>)
 	|| (std::is_trivially_destructible_v<T> && std::is_trivially_constructible_v<T>);
-
-SHION_EXPORT_END
 
 namespace detail
 {
@@ -209,64 +204,62 @@ static_assert(is_implicit_lifetime_v<int (detail::user_declared_destructor::*)()
   static_assert(is_implicit_lifetime_v<detail::incomplete[]>);
   static_assert(is_implicit_lifetime_v<detail::incomplete[5]>);
 // Good enough?
-
-SHION_EXPORT_START
-
 #endif
 
-template <typename T>
+SHION_EXPORT template <typename T>
 concept implicit_lifetime_type = is_implicit_lifetime_v<T>;
 
-template <typename T>
+SHION_EXPORT template <typename T>
 struct tuple_size {};
 
-template <size_t I, typename T>
+SHION_EXPORT template <size_t I, typename T>
 struct tuple_element {};
 
-template <typename T>
+SHION_EXPORT template <typename T>
 struct tuple_size_selector // Workaround msvc struggling to export std::tuple_size partial specialization
 {
 	using type = std::tuple_size<T>;
 };
 
-template <size_t I, typename T>
+SHION_EXPORT template <size_t I, typename T>
 struct tuple_element_selector // Workaround msvc struggling to export std::tuple_size partial specialization
 {
 	using type = std::tuple_element<I, T>;
 };
 
-template <typename T>
+SHION_EXPORT template <typename From, typename To>
+concept explicitly_convertible_to = requires (From&& t) { static_cast<std::add_rvalue_reference_t<To>>(std::forward<From>(t)); };
+
+SHION_EXPORT template <typename T>
 concept tuple_like = requires { tuple_size_selector<T>::type::value; };
 
-template <typename T>
+SHION_EXPORT template <typename T>
 concept tuple_range = std::ranges::range<T> && tuple_like<T>;
 
-template <typename T, typename Value = typename std::iterator_traits<decltype(std::declval<T>().begin())>::value_type>
+SHION_EXPORT template <typename T, typename Value = typename std::iterator_traits<decltype(std::declval<T>().begin())>::value_type>
 concept pushable_container =
 	requires (T cont, Value value) { cont.push_back(std::forward<Value>(value)); }
 	|| requires (T cont, Value value) { cont.push(std::forward<Value>(value)); };
 
-template <typename T, typename Value = typename std::iterator_traits<decltype(std::declval<T>().begin())>::value_type>
+SHION_EXPORT template <typename T, typename Value = typename std::iterator_traits<decltype(std::declval<T>().begin())>::value_type>
 concept emplaceable_container =
 	requires (T cont, Value value) { cont.emplace_back(std::forward<Value>(value)); }
 	|| requires (T cont, Value value) { cont.emplace(std::forward<Value>(value)); };
 
-template <typename T>
+SHION_EXPORT template <typename T>
 concept resizable_container = requires (T range) { range.resize(1); };
 
-template <typename T>
+SHION_EXPORT template <typename T>
 concept reservable_container = requires (T range) { range.reserve(1); };
 
-template <typename T>
+SHION_EXPORT template <typename T>
 concept dynamic_size_container =
 	resizable_container<T>
 	|| pushable_container<T>
 	|| emplaceable_container<T>;
 
-template <typename T>
+SHION_EXPORT template <typename T>
 concept appendable_range = std::ranges::range<T> && dynamic_size_container<T>;
-
-SHION_EXPORT_END
 
 }
 

@@ -262,7 +262,7 @@ namespace detail::coroutine
 /**
  * @brief Specialization of std::coroutine_traits, helps the standard library figure out a promise type from a coroutine function.
  */
-SHION_EXPORT template<typename R, typename... Args>
+template<typename R, typename... Args>
 struct std::coroutine_traits<shion::coroutine<R>, Args...> {
 	using promise_type = shion::detail::coroutine::promise_t<R>;
 };

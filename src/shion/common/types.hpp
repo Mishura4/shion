@@ -71,12 +71,19 @@ struct wildcard {
 
 struct noop_t {
 	template <typename... Args>
-	constexpr wildcard operator()(Args&&...) noexcept {
+	constexpr void operator()(Args&&...) const noexcept {
+	}
+};
+
+struct noop_r_t {
+	template <typename... Args>
+	constexpr wildcard operator()(Args&&...) const noexcept {
 		return {};
 	}
 };
 
 inline constexpr auto noop = noop_t{};
+inline constexpr auto noop_r = noop_r_t{};
 
 struct empty {};
 

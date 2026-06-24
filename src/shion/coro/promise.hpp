@@ -7,10 +7,6 @@
 
 #include <shion/common/defines.hpp>
 
-#include "promise.hpp"
-
-#include "shion/coro.hpp"
-
 #if !SHION_BUILDING_MODULES
 #include <type_traits>
 #include <bit>
@@ -72,376 +68,386 @@ enum state_flags {
 	sf_broken = 0b0010000
 };
 
-using namespace SHION_NAMESPACE::coro;
-
-template <typename Value>
-class promise_value_storage_impl
+template <typename Controller, typename Value, typename ValueRef, typename Carry, typename CarryRef>
+struct promise_storage_base : public basic_result<wrapper<Value, ValueRef>, wrapper<Carry, CarryRef>>
 {
-public:
-	using value_type = typename std::remove_reference<Value>::type;
-	using const_value_type = typename std::add_const<typename std::remove_reference<Value>::type>::type;
-
-	constexpr promise_value_storage_impl() = default;
-	template <typename... Args>
-	constexpr promise_value_storage_impl(Args&&... args) noexcept(std::is_nothrow_constructible_v<Value, Args...>) :
-		_value(std::forward<Args>(args)...)
+	SHION_NO_UNIQUE_ADDRESS Controller controller;
+	
+	using value_storage = wrapper<Value, ValueRef>;
+	using carry_storage = wrapper<Carry, CarryRef>;
+	
+	constexpr bool ready() noexcept
 	{
+		return !this->empty();
 	}
-
-	template <typename T>
-	requires (std::assignable_from<Value, T>)
-	constexpr auto operator=(T&& arg) noexcept(std::is_nothrow_assignable_v<Value, T>)
-	{
-		_value = std::forward<T>(arg);
-	}
-
-	constexpr auto operator<=>(promise_value_storage_impl const&) const = default;
-
-protected:
-	SHION_INTRINSIC constexpr auto _get() noexcept -> value_type& { return _value; }
-	SHION_INTRINSIC constexpr auto _get() const noexcept -> value_type const& { return _value; }
-
-	value_type _value;
 };
 
-template <typename Value>
+template <typename Controller, typename Value, typename ValueRef, typename Carry, typename CarryRef>
+struct promise_value_layer : public promise_storage_base<Controller, Value, ValueRef, Carry, CarryRef>
+{
+	using typename promise_storage_base<Controller, Value, ValueRef, Carry, CarryRef>::value_storage;
+	using value_type = typename value_storage::value_type;
+	using value_reference = typename value_storage::reference;
+	using value_expr_type = value_type;
+	using value_expr_move = value_type&&;
+	using value_expr_copy = std::add_const_t<value_type>&;
+	
+	template <typename... Args>
+	inline static constexpr bool is_nothrow_set_value =
+		noexcept(std::declval<Controller&>().acquire_set_value(std::declval<promise_value_layer&>()).finalize())
+		&& std::is_nothrow_constructible_v<value_storage, Args...>;
+	
+	constexpr auto set_value(value_type&& value) noexcept(is_nothrow_set_value<value_type&&>)
+		requires (std::is_move_constructible_v<value_type>)
+	{
+		return this->template emplace_value(std::move(value));
+	}
+	
+	constexpr auto set_value(std::add_const_t<value_type>& value) noexcept(is_nothrow_set_value<std::add_const_t<value_type>&>)
+		requires (std::is_copy_constructible_v<value_type>)
+	{
+		return this->template emplace_value(value);
+	}
+	
+	constexpr auto return_value(value_expr_move value) noexcept(is_nothrow_set_value<value_expr_move>)
+		requires (std::is_move_constructible_v<value_type>)
+	{
+		return this->template emplace_value(std::move(value));
+	}
+	
+	constexpr auto return_value(value_expr_copy value) noexcept(is_nothrow_set_value<value_expr_copy>)
+		requires (std::is_copy_constructible_v<value_type>)
+	{
+		return this->template emplace_value(value);
+	}
+	
+	template <typename Expr>
+	constexpr auto return_value(Expr&& value) noexcept(is_nothrow_set_value<Expr>)
+		requires (std::is_constructible_v<value_type, Expr>)
+	{
+		return this->template emplace_value(std::forward<Expr>(value));
+	}
+	
+	template <typename... Args>
+	constexpr void emplace_value(Args&&... args) noexcept(is_nothrow_set_value<Args...>)
+		requires (std::constructible_from<value_storage, Args...>)
+	{
+		auto handle = this->controller.acquire_set_value(*this);
+		this->template emplace<0>(std::forward<Args>(args)...);
+		handle.finalize();
+	}
+	
+	constexpr bool has_value() const noexcept
+	{
+		return this->index() == 0;
+	}
+	
+	constexpr auto get_value() & -> decltype(auto)
+		requires requires (value_storage& s) { *s; }
+	{
+		return *shion::get<0>(*this);
+	}
+	
+	constexpr auto get_value() const& -> decltype(auto)
+		requires requires (value_storage const& s) { *s; }
+	{
+		return *shion::get<0>(*this);
+	}
+	
+	constexpr auto get_value() && -> decltype(auto)
+		requires requires (value_storage&& s) { *s; }
+	{
+		return *shion::get<0>(std::move(*this));
+	}
+	
+	constexpr auto get_value() const&& -> decltype(auto)
+		requires requires (value_storage const&& s) { *s; }
+	{
+		return *shion::get<0>(std::move(*this));
+	}
+};
+
+template <typename Controller, typename Value, typename ValueRef, typename Carry, typename CarryRef>
 	requires (std::is_reference_v<Value>)
-class promise_value_storage_impl<Value>
+struct promise_value_layer<Controller, Value, ValueRef, Carry, CarryRef> : public promise_storage_base<Controller, Value, ValueRef, Carry, CarryRef>
 {
-public:
-	using value_type = typename std::remove_reference<Value>::type;
-	using const_value_type = typename std::add_const<typename std::remove_reference<Value>::type>::type;
-	using pointer_type = typename std::add_pointer<value_type>::type;
-	using const_pointer_type = const typename std::add_pointer<value_type>::type;
-	using storage_type = typename std::add_pointer<value_type>::type;
-
-	constexpr promise_value_storage_impl() = default;
-	constexpr promise_value_storage_impl(Value&& ref) noexcept :
-		_value(&ref)
+	using typename promise_storage_base<Controller, Value, ValueRef, Carry, CarryRef>::value_storage;
+	using value_type = typename value_storage::value_type;
+	using value_reference = typename value_storage::reference;
+	using value_expr_type = value_type;
+	
+	template <typename... Args>
+	inline static constexpr bool is_nothrow_set_value =
+		noexcept(std::declval<Controller&>().acquire_set_value(std::declval<promise_value_layer&>()).finalize())
+		&& std::is_nothrow_constructible_v<value_storage, Args...>;
+	
+	constexpr auto set_value(value_expr_type value) noexcept(is_nothrow_set_value<value_expr_type>)
 	{
+		return this->template emplace_value(std::forward<value_expr_type>(value));
 	}
-
-	constexpr auto operator=(Value&& ref) noexcept
+	
+	constexpr auto return_value(value_expr_type value) noexcept(is_nothrow_set_value<value_expr_type>)
 	{
-		_value = &ref;
+		return this->template emplace_value(std::forward<value_expr_type>(value));
 	}
-
-	constexpr auto operator<=>(promise_value_storage_impl const&) const = default;
-
-protected:
-	SHION_INTRINSIC constexpr auto _get() const noexcept -> value_type& { return *_value; }
-
-	pointer_type _value;
+	
+	template <typename Expr>
+	constexpr auto return_value(Expr&& value) noexcept(is_nothrow_set_value<Expr>)
+		requires (std::is_convertible_v<Expr, value_expr_type>)
+	{
+		return this->template emplace_value(std::forward<Expr>(value));
+	}
+	
+	template <typename... Args>
+	constexpr void emplace_value(Args&&... args) noexcept(is_nothrow_set_value<Args...>)
+		requires (std::constructible_from<value_storage, Args...>)
+	{
+		auto handle = this->controller.acquire_set_value(*this);
+		this->template emplace<0>(std::forward<Args>(args)...);
+		handle.finalize();
+	}
+	
+	constexpr bool has_value() const noexcept
+	{
+		return this->index() == 0;
+	}
+	
+	constexpr auto get_value() & -> decltype(auto)
+		requires requires (value_storage& s) { *s; }
+	{
+		return *shion::get<0>(*this);
+	}
+	
+	constexpr auto get_value() const& -> decltype(auto)
+		requires requires (value_storage const& s) { *s; }
+	{
+		return *shion::get<0>(*this);
+	}
+	
+	constexpr auto get_value() && -> decltype(auto)
+		requires requires (value_storage&& s) { *s; }
+	{
+		return *shion::get<0>(std::move(*this));
+	}
+	
+	constexpr auto get_value() const&& -> decltype(auto)
+		requires requires (value_storage const&& s) { *s; }
+	{
+		return *shion::get<0>(std::move(*this));
+	}
 };
 
-template <>
-class promise_value_storage_impl<void>
+template <typename Controller, typename ValueRef, typename Carry, typename CarryRef>
+struct promise_value_layer<Controller, void, ValueRef, Carry, CarryRef> : public promise_storage_base<Controller, void, ValueRef, Carry, CarryRef>
 {
-public:
 	using value_type = void;
-	using const_value_type = void;
-	using storage_type = void;
-
-	constexpr auto operator<=>(promise_value_storage_impl const&) const = default;
-};
-
-template <typename Reference, typename Value>
-using promise_value_storage = promise_value_storage_impl<
-	typename std::conditional<std::is_void_v<Value>, Reference, Value
->::type>;
-
-}
-
-inline namespace coro
-{
-
-template <typename Reference, typename Value = void>
-class promise_value;
-
-template <typename Value>
-class promise_value<void, Value> : public detail::coro::promise_value_storage<void, Value>
-{
-	using storage = detail::coro::promise_value_storage<void, Value>;
-
-public:
-	using typename storage::value_type;
-	using typename storage::const_value_type;
-	using storage::storage;
-	using storage::operator=;
-	using storage::operator<=>;
-	using reference = void;
-	using pointer_type = void;
-};
-
-template <>
-class promise_value<void, void> : public detail::coro::promise_value_storage<void, void>
-{
-	using storage = detail::coro::promise_value_storage<void, void>;
-
-public:
-	using typename storage::value_type;
-	using typename storage::const_value_type;
-	using storage::storage;
-	using storage::operator=;
-	using storage::operator<=>;
-	using reference = void;
-	using pointer_type = void;
-};
-
-template <typename Reference>
-	requires (!std::is_reference_v<Reference>)
-class promise_value<Reference, void> : public detail::coro::promise_value_storage<Reference, void>
-{
-	using storage = detail::coro::promise_value_storage<Reference, void>;
-
-public:
-	using typename storage::value_type;
-	using typename storage::const_value_type;
-	using storage::storage;
-	using storage::operator=;
-	using storage::operator<=>;
-	using reference = value_type&;
-	using rvalue_reference = value_type&&;
-	using const_reference = const value_type&;
-	using const_rvalue_reference = const value_type&&;
-	using pointer_type = value_type*;
-	using const_pointer_type = value_type const*;
-
-	constexpr auto operator*() & noexcept -> value_type& { return this->_get(); }
-	constexpr auto operator*() && noexcept -> value_type&& { return std::move(this->_get()); }
-	constexpr auto operator*() const& noexcept -> const value_type& { return this->_get(); }
-	constexpr auto operator*() const&& noexcept -> const value_type&& { return std::move(this->_get()); }
-
-	constexpr auto operator->()  noexcept -> value_type& { return this->_get(); }
-	constexpr auto operator->() const noexcept -> const value_type& { return std::move(this->_get()); }
-};
-
-template <typename Reference, typename Value>
-class promise_value : public detail::coro::promise_value_storage<Reference, Value>
-{
-	using storage = detail::coro::promise_value_storage<Reference, Value>;
-
-public:
-	using typename storage::value_type;
-	using typename storage::const_value_type;
-	using storage::storage;
-	using storage::operator=;
-	using storage::operator<=>;
-	using reference = Reference;
-
-	constexpr auto operator*() & noexcept(noexcept(static_cast<Reference>(std::declval<value_type&>()))) -> Reference
-		requires requires (value_type& v) { static_cast<Reference>(v); }
+	using value_reference = void;
+	using value_expr_type = void;
+	
+	inline static constexpr bool is_nothrow_set_value = noexcept(std::declval<Controller&>().acquire_set_value(std::declval<promise_value_layer&>()).finalize());
+	
+	constexpr void set_value() noexcept(noexcept(emplace_value()))
 	{
-		return static_cast<Reference>(this->_get());
+		emplace_value();
 	}
-
-	constexpr auto operator*() && noexcept(noexcept(static_cast<Reference>(std::declval<value_type&&>()))) -> Reference
-		requires requires (value_type&& v) { static_cast<Reference>(static_cast<value_type&&>(v)); }
+	
+	constexpr void emplace_value() noexcept(is_nothrow_set_value)
 	{
-		return static_cast<Reference>(this->_get());
-	}
-
-	constexpr auto operator*() const& noexcept(noexcept(static_cast<Reference>(std::declval<const_value_type&>()))) -> Reference
-		requires requires (const_value_type& v) { static_cast<Reference>(v); }
-	{
-		return static_cast<Reference>(this->_get());
-	}
-
-	constexpr auto operator*() const&& noexcept(noexcept(static_cast<Reference>(std::declval<const_value_type&&>()))) -> Reference
-		requires requires (const_value_type&& v) { static_cast<Reference>(static_cast<const_value_type&&>(v)); }
-	{
-		return static_cast<Reference>(std::move(this->_get()));
+		auto handle = Controller::acquire_set_value();
+		this->template emplace<0>();
+		handle.finalize();
 	}
 };
 
-}
-
-namespace detail::coro
+template <typename Controller, typename Value, typename ValueRef, typename Carry, typename CarryRef>
+struct promise_carry_layer : public promise_value_layer<Controller, Value, ValueRef, Carry, CarryRef>
 {
-
-template <typename ReturnRef, typename Return, typename YieldRef, typename Yield>
-struct promise_storage_base
-{
-	using return_storage = promise_value<ReturnRef, Return>;
-	using yield_storage = promise_value<YieldRef, Yield>;
-	using yield_expr_t = typename yield_storage::value_type;
-	using yield_value_t = typename yield_storage::value_type;
-	using yield_reference_t = typename yield_storage::reference;
-	using return_expr_t = typename return_storage::value_type;
-	using return_value_t = typename return_storage::value_type;
-	using return_reference_t = typename return_storage::reference;
-
-	/**
-	 * @brief Variant representing one of either 3 states of the result value : empty, result, exception.
-	*/
-	using storage_type = std::variant<std::monostate, std::exception_ptr, return_storage, yield_storage>;
-
-	inline static constexpr auto INDEX_EMPTY = 0zu;
-	inline static constexpr auto INDEX_EXCEPTION = 1zu;
-	inline static constexpr auto INDEX_RETURN = 2zu;
-	inline static constexpr auto INDEX_YIELD = 3zu;
-
-	/**
-	 * @brief State of the result value.
-	 *
-	 * @see variant_type
-	 */
-	storage_type _storage;
-};
-
-template <typename ReturnRef, typename Return>
-struct promise_storage_base<ReturnRef, Return, ReturnRef, Return>
-{
-	using return_storage = promise_value<ReturnRef, Return>;
-	using yield_storage = void;
-	using yield_expr_t = void;
-	using yield_value_t = void;
-	using yield_reference_t = void;
-	using return_expr_t = typename return_storage::value_type;
-	using return_value_t = typename return_storage::value_type;
-	using return_reference_t = typename return_storage::reference;
-	using storage_type = std::variant<std::monostate, std::exception_ptr, return_storage>;
-
-	inline static constexpr auto INDEX_EMPTY = 0zu;
-	inline static constexpr auto INDEX_EXCEPTION = 1zu;
-	inline static constexpr auto INDEX_RETURN = 2zu;
-
-	storage_type _storage;
-};
-
-template <typename ReturnRef, typename Return, typename YieldRef, typename Yield>
-struct promise_storage_return_layer : promise_storage_base<ReturnRef, Return, YieldRef, Yield>
-{
-	using base = promise_storage_base<ReturnRef, Return, YieldRef, Yield>;
-	using typename base::return_storage;
-	using typename base::yield_storage;
-
+	using typename promise_storage_base<Controller, Value, ValueRef, Carry, CarryRef>::carry_storage;
+	using carry_type = typename carry_storage::value_type;
+	using carry_reference = typename carry_storage::reference;
+	using carry_expr_type = carry_type;
+	using carry_expr_move = carry_expr_type&&;
+	using carry_expr_copy = std::add_const_t<carry_type>&;
+	
 	template <typename... Args>
-	constexpr auto set_return(Args&&... args) noexcept(std::is_nothrow_constructible_v<return_storage, Args...>)
-		-> decltype(auto)
+	inline static constexpr bool is_nothrow_set_carry =
+		noexcept(std::declval<Controller&>().acquire_set_carry(std::declval<promise_carry_layer&>()).finalize())
+		&& std::is_nothrow_constructible_v<carry_storage, Args...>;
+	
+	constexpr auto set_carry(carry_type&& value) noexcept(is_nothrow_set_carry<carry_type&&>)
+		requires (std::is_move_constructible_v<carry_type>)
 	{
-		this->clear();
-		return base::_storage.template emplace<base::INDEX_RETURN>(std::forward<Args>(args)...);
+		return this->template emplace_carry(std::move(value));
 	}
-
-	constexpr auto set_exception(std::exception_ptr ptr) noexcept -> std::exception_ptr&
+	
+	constexpr auto set_carry(std::add_const_t<carry_type>& value) noexcept(is_nothrow_set_carry<std::add_const_t<carry_type>&>)
+		requires (std::is_copy_constructible_v<carry_type>)
 	{
-		this->clear();
-		return base::_storage.template emplace<base::INDEX_EXCEPTION>(std::move(ptr));
+		return this->template emplace_carry(value);
 	}
-
-	constexpr void clear() noexcept
+	
+	constexpr auto yield_value(carry_type&& value) noexcept(is_nothrow_set_carry<carry_type&&>)
+		requires (std::is_move_constructible_v<carry_type>)
 	{
-		base::_storage.template emplace<base::INDEX_EMPTY>();
+		return this->template emplace_carry(std::move(value));
 	}
-
-	constexpr auto get_return() & noexcept(noexcept(*std::declval<return_storage&>())) -> decltype(auto)
+	
+	constexpr auto yield_value(std::add_const_t<carry_type>& value) noexcept(is_nothrow_set_carry<std::add_const_t<carry_type>&>)
+		requires (std::is_copy_constructible_v<carry_type>)
 	{
-		return *std::get<base::INDEX_RETURN>(base::_storage);
+		return this->template emplace_carry(value);
 	}
-
-	constexpr auto get_return() && noexcept(noexcept(*std::declval<return_storage&&>())) -> decltype(auto)
+	
+	template <typename Expr>
+	constexpr auto yield_value(Expr&& value) noexcept(is_nothrow_set_carry<Expr>)
+		requires (std::is_constructible_v<carry_type, Expr>)
 	{
-		return *std::move(std::get<base::INDEX_RETURN>(base::_storage));
+		return this->template emplace_carry(std::forward<Expr>(value));
 	}
-
-	constexpr auto get_return() const& noexcept(noexcept(*std::declval<return_storage const&>())) -> decltype(auto)
-	{
-		return *std::get<base::INDEX_RETURN>(base::_storage);
-	}
-
-	constexpr auto get_return() const&& noexcept(noexcept(*std::declval<return_storage const&&>())) -> decltype(auto)
-	{
-		return *std::move(std::get<base::INDEX_RETURN>(base::_storage));
-	}
-
-	constexpr bool empty() const noexcept
-	{
-		return base::_storage.index() == base::INDEX_EMPTY;
-	}
-
-	constexpr bool ready() const noexcept
-	{
-		return !base::empty();
-	}
-
-	constexpr bool has_return() const noexcept
-	{
-		return base::_storage.index() == base::INDEX_RETURN;
-	}
-
-	constexpr bool has_exception() const noexcept
-	{
-		return base::_storage.index() == base::INDEX_EXCEPTION;
-	}
-
-	/**
-	 * @brief Check if the result is empty, throws otherwise.
-	 *
-	 * @throw logic_exception if the result isn't empty.
-	 */
-	constexpr void throw_if_not_empty() const
-	{
-		if (empty())
-		{
-			throw internal_exception("cannot set a value on a promise that already has one");
-		}
-	}
-};
-
-template <typename ReturnRef, typename Return, typename YieldRef, typename Yield>
-struct promise_storage : promise_storage_return_layer<ReturnRef, Return, YieldRef, Yield>
-{
-	using base = promise_storage_return_layer<ReturnRef, Return, YieldRef, Yield>;
-	using typename base::yield_storage;
-	using typename base::return_storage;
-
+	
 	template <typename... Args>
-	constexpr auto set_yield(Args&&... args) noexcept(std::is_nothrow_constructible_v<yield_storage, Args...>)
-		-> decltype(auto)
+	constexpr auto emplace_carry(Args&&... args) noexcept(is_nothrow_set_carry<Args...>)
+		requires (std::constructible_from<carry_storage, Args...>)
 	{
-		this->clear();
-		return base::_storage.template emplace<base::INDEX_YIELD>(std::forward<Args>(args)...);
+		auto handle = this->controller.acquire_set_carry();
+		this->template emplace<1>(std::forward<Args>(args)...);
+		handle.finalize();
+		return handle;
 	}
-
-	constexpr auto get_yield() & noexcept(noexcept(*std::declval<yield_storage&>())) -> decltype(auto)
+	
+	constexpr bool has_carry() const noexcept
 	{
-		return **std::get_if<base::INDEX_YIELD>(std::addressof(base::_storage));
+		return this->index() == 1;
 	}
-
-	constexpr auto get_yield() && noexcept(noexcept(*std::declval<yield_storage&&>())) -> decltype(auto)
+	
+	constexpr auto get_carry() & -> decltype(auto)
+		requires requires (carry_storage& s) { *s; }
 	{
-		return *std::move(*std::get_if<base::INDEX_YIELD>(std::addressof(base::_storage)));
+		return *shion::get<1>(*this);
 	}
-
-	constexpr auto get_yield() const& noexcept(noexcept(*std::declval<yield_storage const&>())) -> decltype(auto)
+	
+	constexpr auto get_carry() const& -> decltype(auto)
+		requires requires (carry_storage const& s) { *s; }
 	{
-		return **std::get_if<base::INDEX_YIELD>(std::addressof(base::_storage));
+		return *shion::get<1>(*this);
 	}
-
-	constexpr auto get_yield() const&& noexcept(noexcept(*std::declval<yield_storage const&&>())) -> decltype(auto)
+	
+	constexpr auto get_carry() && -> decltype(auto)
+		requires requires (carry_storage&& s) { *std::move(s); }
 	{
-		return *std::move(*std::get_if<base::INDEX_YIELD>(std::addressof(base::_storage)));
+		return *shion::get<1>(std::move(*this));
 	}
-
-	constexpr bool has_yield() noexcept
+	
+	constexpr auto get_carry() const&& -> decltype(auto)
+		requires requires (carry_storage const&& s) { *std::move(s); }
 	{
-		return base::_storage.index() == base::INDEX_YIELD;
+		return *shion::get<1>(std::move(*this));
 	}
 };
 
-template <typename ReturnRef, typename Return>
-struct promise_storage<ReturnRef, Return, void, void> : promise_storage_return_layer<ReturnRef, Return, void, void>
+template <typename Controller, typename Value, typename ValueRef, typename Carry, typename CarryRef>
+	requires (std::is_reference_v<Carry>)
+struct promise_carry_layer<Controller, Value, ValueRef, Carry, CarryRef> : public promise_value_layer<Controller, Value, ValueRef, Carry, CarryRef>
 {
-	using base = promise_storage_return_layer<ReturnRef, Return, void, void>;
-	using typename base::yield_storage;
-	using typename base::return_storage;
+	using typename promise_storage_base<Controller, Value, ValueRef, Carry, CarryRef>::carry_storage;
+	using carry_type = typename carry_storage::value_type;
+	using carry_reference = typename carry_storage::reference;
+	using carry_expr_type = carry_type;
+	
+	template <typename... Args>
+	inline static constexpr bool is_nothrow_set_carry =
+		noexcept(std::declval<Controller&>().acquire_set_carry(std::declval<promise_carry_layer&>()).finalize())
+		&& std::is_nothrow_constructible_v<carry_storage, Args...>;
+	
+	constexpr auto set_carry(carry_reference value) noexcept(is_nothrow_set_carry<carry_reference>)
+	{
+		return this->template emplace_carry(std::forward<carry_reference>(value));
+	}
+	
+	constexpr auto yield_value(carry_reference value) noexcept(is_nothrow_set_carry<carry_reference>)
+	{
+		return this->template emplace_carry(std::forward<carry_reference>(value));
+	}
+	
+	template <typename Expr>
+	constexpr auto yield_value(Expr&& value) noexcept(is_nothrow_set_carry<Expr&&>)
+		requires (std::convertible_to<Expr, carry_reference>)
+	{
+		return this->template emplace_carry(std::forward<Expr>(value));
+	}
+	
+	template <typename... Args>
+	constexpr auto emplace_carry(Args&&... args) noexcept(is_nothrow_set_carry<Args&&...>)
+		requires (std::constructible_from<carry_storage, Args...>)
+	{
+		auto handle = this->controller.acquire_set_carry();
+		this->template emplace<1>(std::forward<Args>(args)...);
+		handle.finalize();
+		return handle;
+	}
+	
+	constexpr bool has_carry() const noexcept
+	{
+		return this->index() == 1;
+	}
+	
+	constexpr auto get_carry() const -> decltype(auto)
+		requires requires (carry_storage const& s) { *s; }
+	{
+		return *shion::get<1>(*this);
+	}
+};
+
+template <typename Controller, typename Value, typename ValueRef, typename CarryRef>
+struct promise_carry_layer<Controller, Value, ValueRef, void, CarryRef> : public promise_value_layer<Controller, Value, ValueRef, void, CarryRef>
+{
+	using carry_type = void;
+	using carry_reference = void;
+	using carry_expr_type = make_complete<void>;
+};
+
+template <typename Controller, typename ReturnRef, typename Return, typename YieldRef, typename Yield>
+struct promise_storage : promise_carry_layer<Controller, ReturnRef, Return, YieldRef, Yield>
+{
+};
+
+template <typename Controller, typename Value, typename YieldRef, typename Yield>
+requires (!std::is_void_v<YieldRef>)
+struct promise_storage : promise_carry_layer<Controller, void, Value, YieldRef, Yield>
+{
+private:
+	using carry_layer = promise_carry_layer<Controller, void, Value, YieldRef, Yield>;
+
+public:
+	constexpr auto get_value() & -> decltype(auto)
+		requires requires (carry_layer& s) { s.get_carry(); }
+	{
+		return this->get_carry();
+	}
+	
+	constexpr auto get_value() const& -> decltype(auto)
+		requires requires (carry_layer const& s) { s.get_carry(); }
+	{
+		return this->get_carry();
+	}
+	
+	constexpr auto get_value() && -> decltype(auto)
+		requires requires (carry_layer&& s) { std::move(s).get_carry(); }
+	{
+		return std::move(*this).get_carry();
+	}
+	
+	constexpr auto get_value() const&& -> decltype(auto)
+		requires requires (carry_layer const&& s) { std::move(s).get_carry(); }
+	{
+		return std::move(*this).get_carry();
+	}
 };
 
 template <typename T>
 using promise_type = typename std::remove_cvref<decltype(get_promise(std::declval<T&>()))>::type;
 
-class simple_coro_handler
+class simple_coro_controller
 {
 protected:
 	/**
@@ -453,7 +459,7 @@ public:
 	/**
 	 * @brief Construct a new promise, with empty result.
 	 */
-	constexpr simple_coro_handler() = default;
+	constexpr simple_coro_controller() = default;
 
 	constexpr bool attach_awaiter(coro_handle<> handle)
 	{
@@ -491,17 +497,23 @@ public:
 
 	struct suspend_and_continue
 	{
-		simple_coro_handler* self;
+		simple_coro_controller* self;
 
-		constexpr suspend_and_continue(simple_coro_handler& handler) noexcept : self(&handler) {}
+		constexpr suspend_and_continue(simple_coro_controller& handler) noexcept : self(&handler) {}
 
 		constexpr static bool await_ready() noexcept { return false; }
 		constexpr auto await_suspend(coro_handle<>) const noexcept -> coro_handle<>
 		{
 			return self->awaiter ? self->awaiter : std::noop_coroutine();
 		}
-		constexpr static void await_resume() noexcept {};
+		constexpr static void await_resume() noexcept {}
+		constexpr static void finalize() noexcept {}
 	};
+	
+	constexpr auto acquire_set_carry(auto&&...) noexcept
+	{
+		return suspend_and_continue(*this);
+	}
 
 	constexpr bool has_awaiter() const noexcept
 	{
@@ -519,7 +531,7 @@ public:
 	}
 };
 
-class atomic_coro_handler : protected simple_coro_handler
+class atomic_coro_handler : protected simple_coro_controller
 {
 protected:
 	using flags = detail::coro::state_flags;
@@ -530,7 +542,7 @@ protected:
 	std::atomic<uint8> state = flags::sf_none;
 
 public:
-	using simple_coro_handler::has_awaiter;
+	using simple_coro_controller::has_awaiter;
 
 	bool attach_awaiter(detail::std_coroutine::coroutine_handle<> handle)
 	{
@@ -538,7 +550,7 @@ public:
 		if (previous_flags & flags::sf_awaited) {
 			throw logic_exception("awaitable is already being awaited");
 		}
-		simple_coro_handler::attach_awaiter(handle);
+		simple_coro_controller::attach_awaiter(handle);
 		return !(previous_flags & flags::sf_ready);
 	}
 
@@ -550,7 +562,7 @@ public:
 		if (state.load(std::memory_order_acquire) & flags::sf_awaited)
 		{
 			SHION_ASSUME(this->has_awaiter());
-			simple_coro_handler::notify_awaiter();
+			simple_coro_controller::notify_awaiter();
 		}
 	}
 
@@ -593,13 +605,12 @@ public:
 template <typename Storage, typename Logic>
 class promise_state : public Logic, protected Storage
 {
-	using storage = Storage;
 	using logic = Logic;
 
 public:
-	using typename storage::storage_type;
-	using value_type = storage::return_value_t;
-	using reference = storage::return_reference_t;
+	using storage = Storage;
+	using typename storage::value_reference;
+	using typename storage::carry_reference;
 	using storage::has_exception;
 	using logic::logic;
 	using logic::operator=;
@@ -610,6 +621,12 @@ public:
 		return logic::ready() && storage::ready();
 	}
 
+	constexpr void throw_if_not_empty() const
+	{
+		if (!storage::empty())
+			throw logic_exception("promise already has a result");
+	}
+
 	/**
 	 * @brief Set this promise to an exception and resume any awaiter.
 	 *
@@ -618,7 +635,7 @@ public:
 	 */
 	template <bool Notify = true>
 	constexpr void set_exception(std::exception_ptr ptr) {
-		storage::throw_if_not_empty();
+		throw_if_not_empty();
 		storage::set_exception(std::move(ptr));
 		logic::mark_ready(Notify);
 	}
@@ -629,11 +646,61 @@ public:
 	 * @tparam Notify Whether to resume any awaiter or not.
 	 * @throws logic_exception if the promise is not empty.
 	 */
-	template <bool Notify = true, typename T = storage::storage_type, typename... Args>
-	requires (std::constructible_from<T, Args...>)
-	constexpr void set_value(Args&&... args) {
-		storage::throw_if_not_empty();
-		storage::set_return(std::forward<Args>(args)...);
+	template <bool Notify = true>
+	requires (!std::is_void<value_reference>::value)
+	constexpr void set_value(non_void<value_reference> value) {
+		this->template emplace_value<Notify>(std::forward<value_reference>(value));
+	}
+
+	/**
+	 * @brief Construct the result in place by forwarding the arguments, and by default resume any awaiter.
+	 *
+	 * @tparam Notify Whether to resume any awaiter or not.
+	 * @throws logic_exception if the promise is not empty.
+	 */
+	template <bool Notify = true>
+	requires (std::is_void<value_reference>::value)
+	constexpr void set_value() {
+		this->template emplace_value<Notify>();
+	}
+
+	/**
+	 * @brief Construct the result in place by forwarding the arguments, and by default resume any awaiter.
+	 *
+	 * @tparam Notify Whether to resume any awaiter or not.
+	 * @throws logic_exception if the promise is not empty.
+	 */
+	template <bool Notify = true, typename... Args>
+	requires (std::constructible_from<make_complete<value_reference>, Args...>)
+	constexpr void emplace_value(Args&&... args) {
+		throw_if_not_empty();
+		storage::emplace_value(std::forward<value_reference>(args)...);
+		logic::mark_ready(Notify);
+	}
+
+	/**
+	 * @brief Construct the result in place by forwarding the arguments, and by default resume any awaiter.
+	 *
+	 * @tparam Notify Whether to resume any awaiter or not.
+	 * @throws logic_exception if the promise is not empty.
+	 */
+	template <bool Notify = true>
+	requires (!std::is_void<carry_reference>::value)
+	constexpr void set_carry(non_void<carry_reference> value) {
+		this->template emplace_value<Notify>(std::forward<carry_reference>(value));
+	}
+
+	/**
+	 * @brief Construct the result in place by forwarding the arguments, and by default resume any awaiter.
+	 *
+	 * @tparam Notify Whether to resume any awaiter or not.
+	 * @throws logic_exception if the promise is not empty.
+	 */
+	template <bool Notify = true, typename... Args>
+	requires (!std::is_void<carry_reference>::value && std::constructible_from<make_complete_t<carry_reference>::type, Args...>)
+	constexpr void emplace_carry(Args&&... args) {
+		throw_if_not_empty();
+		storage::emplace_carry(std::forward<carry_reference>(args)...);
 		logic::mark_ready(Notify);
 	}
 
@@ -812,13 +879,13 @@ class awaitable_impl : protected StateHolder
 protected:
 	using shared_state_holder = StateHolder;
 	using shared_state = StateHolder::state_type;
-	using storage_type = shared_state::storage_type;
+	using storage_type = shared_state::storage;
 	friend shared_state;
 
 	using shared_state_holder::shared_state_holder;
 
 public:
-	using reference = shared_state::reference;
+	using reference = shared_state::value_reference;
 	using value_type = shared_state::value_type;
 
 	/**
@@ -916,7 +983,7 @@ using awaitable = awaitable_impl<simple_state_holder<State>>;
 template <typename Reference, typename Value>
 using simple_promise_state = promise_state<
 	promise_storage<Reference, Value, void, void>,
-	simple_coro_handler
+	simple_coro_controller
 >;
 
 template <typename Reference, typename Value>

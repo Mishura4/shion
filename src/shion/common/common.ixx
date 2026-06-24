@@ -2,7 +2,7 @@ module;
 
 #include <shion/export.hpp>
 
-#if !SHION_IMPORT_STD
+#if !SHION_IMPORT_STD || __RESHARPER__
 #	include <chrono>
 #	include <concepts>
 #	include <type_traits>
@@ -35,3 +35,4 @@ import std;
 #include "shion/common/literals.hpp"
 #include "shion/common/exception.hpp"
 #include "shion/common/tools.hpp"
+#include "shion/common/storage.hpp"
