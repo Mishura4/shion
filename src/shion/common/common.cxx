@@ -17,6 +17,7 @@ module;
 #include <source_location>
 #include <ranges>
 #include <algorithm>
+#include <atomic>
 #endif
 
 module shion;

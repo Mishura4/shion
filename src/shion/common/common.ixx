@@ -16,6 +16,7 @@ module;
 #	include <atomic>
 #	include <version>
 #	include <variant>
+#	include <atomic>
 #endif
 
 #include <cstddef>

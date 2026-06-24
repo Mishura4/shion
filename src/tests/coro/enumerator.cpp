@@ -123,7 +123,7 @@ bool tests::enumerator_finite(test& t)
 
 bool tests::enumerator_infinite(test& t)
 {
-	auto values = enumerable(fibonacci()) | std::views::take(5) | std::ranges::to<std::vector<int>>();
+	auto values = wrapped_fibonacci() | std::views::take(5) | std::ranges::to<std::vector<int>>();
 	TEST_ASSERT(t, std::ranges::equal(values, std::array{1, 1, 2, 3, 5}));
 	return true;
 }

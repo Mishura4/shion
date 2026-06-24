@@ -48,9 +48,8 @@ jobs:
         os:
           - { name: 'Ubuntu', dist: 'ubuntu', version: 26.04 }
         compiler:
-          - { name: "g++15", cxx: g++, cc: gcc, version: 15, cmake-flags: '-DSHION_BUILD_MODULES=off -DSHION_BUILD_TESTS=off' }
-          - { name: "llvm22", cxx: clang++, cc: clang, version: 22, cmake-flags: '-DSHION_BUILD_MODULES=off -DSHION_IMPORT_STD=off -DSHION_BUILD_TESTS=off' }
-          - { name: "llvm22 modules", cxx: clang++, cc: clang, version: 22, cmake-flags: '-DSHION_IMPORT_STD=off -DSHION_BUILD_MODULES=on' }
+          - { name: "g++15", cxx: g++, cc: gcc, version: 15, cmake-flags: '' }
+          - { name: "llvm22", cxx: clang++, cc: clang, version: 22, cmake-flags: '-DSHION_IMPORT_STD=off -DSHION_BUILD_MODULES=on' }
         build: [ Debug ]
     name: '${{ matrix.os.name }} ${{ matrix.os.version }} ${{ matrix.arch }}'
     uses: ./.github/workflows/linux_ci.yml
