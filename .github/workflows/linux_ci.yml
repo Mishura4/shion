@@ -103,12 +103,6 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
-      - name: Install CMake
-        id: install-cmake
-        uses: ./.github/actions/install-cmake
-        with:
-          version: 4.0.0-rc4
-
       - name: Generate CMake
         run: cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=${{ inputs.build }} ${{ inputs.cmake-flags }}
 
