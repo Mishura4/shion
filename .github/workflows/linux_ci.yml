@@ -79,15 +79,11 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Add LLVM key
-        if: ${{ inputs.cc == 'clang' }}
-        run: wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-
       - name: Add LLVM repository
         if: ${{ inputs.cc == 'clang' }}
         run: |
           osname=`cat /etc/os-release | grep -e "^VERSION_CODENAME" | cut -d= -f2`
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/llvm-snapshot-keyring.gpg
           sudo apt-add-repository -y "deb http://apt.llvm.org/$osname/ llvm-toolchain-$osname-${{ inputs.cxx-ver }} main"
 
       - name: Install apt packages
