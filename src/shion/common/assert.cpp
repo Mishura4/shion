@@ -8,6 +8,8 @@
 		#include <filesystem>
 		#include <iostream>
 		#include <syncstream>
+		#include <algorithm>
+		#include <ranges>
 	#endif
 
 	#if _WIN32

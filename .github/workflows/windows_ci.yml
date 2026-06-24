@@ -85,7 +85,7 @@ jobs:
         shell: bash
         run: |
           BUILD_TYPE="${{ inputs.build }}"
-          cmake . -B build -G "${{ inputs.generator }}" -DCMAKE_BUILD_TYPE=${{ inputs.build }} ${{ inputs.cmake-flags }} -DSHION_BUILD_TESTS=off
+          cmake . -B build -G "${{ inputs.generator }}" -DCMAKE_BUILD_TYPE=${{ inputs.build }} ${{ inputs.cmake-flags }} -DSHION_BUILD_MODULES=off -DSHION_BUILD_TESTS=off
 
       - name: Build Project
         run: cmake --build build --parallel 4

@@ -3,11 +3,12 @@ module;
 #include <shion/export.hpp>
 #include <shion/common/defines.hpp>
 
+#include <climits>
+
 #if !SHION_IMPORT_STD
 #include <cstring>
 #include <cstddef>
 #include <cstdio>
-#include <climits>
 #include <tuple>
 #include <algorithm>
 #include <utility>
