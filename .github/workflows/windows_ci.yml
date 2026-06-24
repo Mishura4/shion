@@ -7,10 +7,10 @@ on:
         default: x64
       os:
         type: string
-        default: windows-2022
+        default: windows-2025-vs2026
       compiler:
         type: string
-        default: vs2022
+        default: vs2026
       generator:
         type: string
         default: Ninja
@@ -34,10 +34,10 @@ on:
         default: x64
       os:
         type: string
-        default: windows-2022
+        default: windows-2025-vs2026
       compiler:
         type: string
-        default: vs2022
+        default: vs2026
       generator:
         type: string
         default: Ninja
