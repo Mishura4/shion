@@ -82,6 +82,7 @@ jobs:
           persist-credentials: false
 
       - name: Generate CMake
+        shell: bash
         run: |
           BUILD_TYPE="${{ inputs.build }}"
           cmake . -B build -G "${{ inputs.generator }}" --preset="msvc-${{ inputs.arch }}-${BUILD_TYPE@L}" ${{ inputs.cmake-flags }}

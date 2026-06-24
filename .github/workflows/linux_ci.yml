@@ -104,7 +104,10 @@ jobs:
           persist-credentials: false
 
       - name: Generate CMake
-        run: cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=${{ inputs.build }} ${{ inputs.cmake-flags }}
+        shell: bash
+        run: |
+          BUILD_TYPE="${{ inputs.build }}"
+          cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=${{ inputs.build }} --preset="linux-${{ inputs.cc }-${BUILD_TYPE@L}" ${{ inputs.cmake-flags }}
 
       - name: Build Project
         run: cmake --build build --parallel 4
