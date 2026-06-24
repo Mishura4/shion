@@ -1,11 +1,30 @@
 module;
 
+#if !SHION_IMPORT_STD
+#include <cstddef>
+#include <bit>
+#include <string>
+#include <array>
+#include <tuple>
+#include <span>
+#include <variant>
+#include <coroutine>
+#include <algorithm>
+#include <ranges>
+#include <vector>
 #include <filesystem>
 #include <source_location>
+#include <sstream>
+#include <chrono>
+#endif
 
 #include "tests.hpp"
 
 module shion.tests;
+
+#if SHION_IMPORT_STD
+import std;
+#endif
 
 import shion;
 

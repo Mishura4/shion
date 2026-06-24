@@ -4,11 +4,27 @@
 
 module;
 
+#include <shion/common/defines.hpp>
+
+#if !SHION_IMPORT_STD
+#include <ranges>
+#include <algorithm>
+#include <source_location>
+#include <format>
+#include <optional>
+#include <array>
+#include <coroutine>
+#include <variant>
+#endif
+
 #include "../tests.hpp"
 
 module shion.tests;
 
+#if SHION_IMPORT_STD
 import std;
+#endif
+
 import shion;
 
 namespace shion

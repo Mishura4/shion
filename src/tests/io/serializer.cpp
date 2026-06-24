@@ -3,7 +3,6 @@ module;
 #include <shion/common/defines.hpp>
 
 #if !SHION_IMPORT_STD
-
 #include <cstddef>
 #include <bit>
 #include <string>
@@ -16,7 +15,8 @@ module;
 #include <list>
 #include <queue>
 #include <unordered_map>
-
+#include <utility>
+#include <type_traits>
 #endif
 
 #include "../tests.hpp"

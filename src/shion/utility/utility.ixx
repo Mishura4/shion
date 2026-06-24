@@ -39,6 +39,7 @@ export module shion:utility;
 #if SHION_IMPORT_STD
 import std;
 #endif
+
 import :common;
 import :meta;
 

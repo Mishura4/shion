@@ -4,11 +4,12 @@ module;
 #include <shion/common/defines.hpp>
 
 #if _WIN32
-	#include <Windows.h>
+#include <Windows.h>
 #endif
 
 #if !SHION_IMPORT_STD
 #include <cstdlib>
+#include <cassert>
 #include <filesystem>
 #include <iostream>
 #include <syncstream>
@@ -16,11 +17,6 @@ module;
 #include <source_location>
 #include <ranges>
 #include <algorithm>
-
-#if _WIN32
-#include <Windows.h>
-#endif
-
 #endif
 
 module shion;

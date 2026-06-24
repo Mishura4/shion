@@ -8,7 +8,6 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-
 #include <type_traits>
 #include <bit>
 #include <list>

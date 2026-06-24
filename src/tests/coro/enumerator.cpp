@@ -15,6 +15,9 @@ module;
 #include <span>
 #include <variant>
 #include <coroutine>
+#include <algorithm>
+#include <ranges>
+#include <vector>
 #endif
 
 #include "../tests.hpp"

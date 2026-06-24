@@ -4,12 +4,12 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#	include <shion/utility/tuple.hpp>
-#	include <shion/common/common.hpp>
-
 #	include <tuple>
 #	include <ranges>
 #	include <concepts>
+
+#	include <shion/utility/tuple.hpp>
+#	include <shion/common/common.hpp>
 #endif
 
 namespace SHION_NAMESPACE
