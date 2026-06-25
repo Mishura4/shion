@@ -531,7 +531,7 @@ public:
 	}
 };
 
-class atomic_coro_handler : protected simple_coro_controller
+class atomic_continuation_controller : protected simple_coro_controller
 {
 protected:
 	using flags = detail::coro::state_flags;
@@ -989,7 +989,7 @@ using simple_promise_state = promise_state<
 template <typename Reference, typename Value>
 using async_promise_state = promise_state<
 	promise_storage<Reference, Value, void, void>,
-	atomic_coro_handler
+	atomic_continuation_controller
 >;
 
 template <typename StateHolder>

@@ -28,6 +28,8 @@ import std;
 
 import shion;
 
+#define SHION_MAKE_TEST(suite, fun) suite.make_test(#fun, &fun);
+
 namespace shion::tests
 {
 
@@ -58,6 +60,14 @@ std::vector<test_suite> init() {
 	coro.make_test("event_hook_simple", &event_hook_simple);
 	coro.make_test("event_hook_order", &event_hook_order);
 	coro.make_test("event_hook_stress_push", &event_hook_stress_push);
+	
+	auto& async = ret.emplace_back("Async");
+	SHION_MAKE_TEST(async, async_void);
+	SHION_MAKE_TEST(async, async_value);
+	SHION_MAKE_TEST(async, async_reference);
+	SHION_MAKE_TEST(async, async_await);
+	SHION_MAKE_TEST(async, async_move);
+	SHION_MAKE_TEST(async, async_destruction);
 
 	auto& io = ret.emplace_back("I/O");
 	io.make_test("serializer_helper with fundamental types", &serializer_helper_fundamental);

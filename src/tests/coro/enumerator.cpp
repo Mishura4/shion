@@ -100,10 +100,9 @@ bool tests::enumerator_finite(test& t)
 {
 	auto enumerator = finite_enumeration();
 	std::vector<int> values;
-	while (enumerator)
+	while (++enumerator)
 	{
 		values.push_back(*enumerator);
-		++enumerator;
 	}
 	enumerator = {};
 	TEST_ASSERT(t, std::ranges::equal(values, std::array{6, 7}));
@@ -130,7 +129,7 @@ bool tests::enumerator_infinite(test& t)
 
 bool tests::enumerator_exceptions(test& t)
 {
-	enumerator<int> enumerator = throws();
+	enumerator<int> enumerator = ++throws();
 	TEST_ASSERT(t, *enumerator == 1);
 	bool threw_on_get = false;
 	bool threw_on_increment = false;
@@ -169,14 +168,14 @@ bool tests::enumerator_destructions(test& t)
 
 	// End of scope test
 	destroyed = false;
-	auto enumerator = do_the_thing(destroyed);
+	auto enumerator = ++do_the_thing(destroyed);
 	TEST_ASSERT(t, !destroyed);
 	++enumerator;
 	TEST_ASSERT(t, destroyed);
 
 	// Coroutine destruction test
 	destroyed = false;
-	enumerator = do_the_thing(destroyed);
+	enumerator = ++do_the_thing(destroyed);
 	enumerator = {};
 	TEST_ASSERT(t, destroyed);
 	return true;
@@ -184,10 +183,9 @@ bool tests::enumerator_destructions(test& t)
 
 bool tests::enumerator_references(test& t)
 {
-	auto enumerator = access_local();
+	auto&& enumerator = ++access_local();
 	TEST_ASSERT(t, *enumerator == 0);
 	*enumerator = 1;
-	++enumerator;
 	TEST_ASSERT(t, *enumerator == 1);
 	return true;
 }

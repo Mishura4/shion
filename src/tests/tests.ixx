@@ -6,3 +6,4 @@ export import :suite;
 export import :io;
 export import :containers;
 export import :coro;
+export import :async;

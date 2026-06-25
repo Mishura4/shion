@@ -20,82 +20,90 @@ SHION_EXPORT struct async_dummy
 	std::shared_ptr<int> dummy_shared_state = nullptr;
 };
 
-namespace detail {
+namespace detail
+{
 
-namespace async {
+template <typename Reference, typename Value>
+using async_value_t = std::conditional_t<std::is_void_v<Value>, Reference, Value>;
 
-/**
- * @brief Shared state of the async and its callback, to be used across threads.
- */
-template <typename R>
-struct callback {
-	std::shared_ptr<async_single_promise<R>> promise{nullptr};
+template <typename Value>
+using async_state = detail::coro::promise_state<detail::coro::atomic_continuation_controller, Value, void>;
 
-	void operator()(const R& v) const {
-		promise->set_value(v);
-	}
+template <typename Value>
+using async_state_ptr = std::shared_ptr<async_state<Value>>;
 
-	void operator()(R&& v) const {
-		promise->set_value(std::move(v));
-	}
+template <typename Value>
+using async_state_accessor = coro::promise_state_accessor<async_state_ptr<Value>>;
 
-	friend auto get_promise(const callback& cb) -> async_single_promise<R>&
+template <typename Value>
+struct async_callback : async_state_accessor<Value>
+{
+	using async_state_accessor<Value>::async_state_accessor;
+	using signature_t = void(Value);
+	
+	async_callback(async_state_accessor<Value> accessor) : async_state_accessor<Value>(std::move(accessor))
+	{}
+
+	template <std::convertible_to<Value> Arg>
+	void operator()(Arg&& arg) noexcept(std::is_nothrow_convertible_v<Arg, Value>)
 	{
-		return *cb.promise;
+		this->get_promise_state().emplace_value(std::forward<Arg>(arg));
 	}
 };
 
 template <>
-struct callback<void>  {
-	using state_type = async_promise<void>;
+struct async_callback<void> : async_state_accessor<void>
+{
+	using async_state_accessor<void>::async_state_accessor;
+	using signature_t = void();
+	
+	async_callback(async_state_accessor<void> accessor) : async_state_accessor<void>(std::move(accessor))
+	{}
 
-	std::shared_ptr<state_type> promise{nullptr};
-
-	bool valid() const noexcept
+	void operator()() noexcept
 	{
-		return promise != nullptr;
-	}
-
-	void operator()() const {
-		promise->set_value();
-	}
-
-	auto get_promise() -> state_type&
-	{
-		return *promise;
-	}
-
-	void release() noexcept
-	{
-		promise = {};
+		this->get_promise_state().emplace_value();
 	}
 };
 
-} // namespace async
-
-} // namespace detail
+}
 
 /**
  * @class async async.h coro/async.h
  * @brief A co_await-able object handling an async call in parallel with the caller.
  */
 template <typename Reference, typename Value>
-class async : public detail::coro::awaitable_impl<detail::async::callback<Reference>>
+class async : public basic_awaitable<
+	Reference, detail::async_state_ptr<detail::async_value_t<Reference, Value>>
+>
 {
-	using base = detail::coro::awaitable_impl<detail::async::callback<Reference>>;
-
-	explicit async(std::shared_ptr<coro::single_promise<Reference>> &&promise) :
-		base{ detail::async::callback<Reference>(std::move(promise)) }
+	using value_t = detail::async_value_t<Reference, Value>;
+	using state_type = detail::async_state<value_t>;
+	using state_ptr = detail::async_state_ptr<value_t>;
+	using state_accessor = detail::async_state_accessor<value_t>;
+	using base = basic_awaitable<Reference, state_ptr>;
+	using callback = detail::async_callback<value_t>;
+	using callback_signature = callback::signature_t;
+	
+	template <typename Fun, typename... Args>
+	auto _invoke(Fun&& fun, Args&&... args) -> decltype(auto)
 	{
+		return std::invoke(
+			std::forward<Fun>(fun),
+			std::forward<Args>(args)...,
+			callback(*static_cast<state_accessor*>(this))
+		);
 	}
 
 public:
-	using base::base; // use awaitable's constructors
-	using base::operator=; // use async_base's assignment operator
-	using base::await_ready; // expose await_ready as public
-	using base::await_suspend; // expose await_suspend as public
-	using base::await_resume; // expose await_resume as public
-
+	async() = default;
+	async(const async&) = delete;
+	async(async&&) = default;
+	~async() = default;
+	
+	auto operator=(const async&) -> async& = delete;
+	auto operator=(async&&) -> async& = default;
+	
 	/**
 	 * @brief Construct an async object wrapping an object method, the call is made immediately by forwarding to <a href="https://en.cppreference.com/w/cpp/utility/functional/invoke">std::invoke</a> and can be awaited later to retrieve the result.
 	 *
@@ -105,10 +113,10 @@ public:
 	 */
 	template <typename Obj, typename Fun, typename... Args>
 #ifndef _DOXYGEN_
-	requires std::invocable<Fun, Obj, Args..., std::function<void(Reference)>>
+	requires std::invocable<Fun, Obj, Args..., callback_signature>
 #endif
-	explicit async(Obj &&obj, Fun &&fun, Args&&... args) : async{std::make_shared<coro::single_promise<Reference>>()} {
-		std::invoke(std::forward<Fun>(fun), std::forward<Obj>(obj), std::forward<Args>(args)..., base::state_ptr);
+	explicit async(Obj &&obj, Fun &&fun, Args&&... args) : async{ std::make_shared<state_type>() } {
+		this->_invoke(std::forward<Fun>(fun), std::forward<Obj>(obj), std::forward<Args>(args)...);
 	}
 
 	/**
@@ -119,14 +127,18 @@ public:
 	 */
 	template <typename Fun, typename... Args>
 #ifndef _DOXYGEN_
-	requires std::invocable<Fun, Args..., std::function<void(Reference)>>
+	requires std::invocable<Fun, Args..., callback_signature>
 #endif
-	explicit async(Fun &&fun, Args&&... args) : async{std::make_shared<coro::single_promise<Reference>>()} {
-		std::invoke(std::forward<Fun>(fun), std::forward<Args>(args)..., base::state_ptr);
+	explicit async(Fun &&fun, Args&&... args) : async{ std::make_shared<state_type>() } {
+		this->_invoke(std::forward<Fun>(fun), std::forward<Args>(args)...);
+	}
+	
+private:
+	explicit async(state_ptr &&promise) :
+		base{ state_accessor{ std::move(promise) } }
+	{
 	}
 };
-
-inline constexpr auto foo = sizeof(async<>);
 
 static_assert(is_placeholder_for<async<>, async_dummy>);
 

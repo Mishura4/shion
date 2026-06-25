@@ -6,27 +6,27 @@ module;
 
 #if !SHION_IMPORT_STD
 #include <algorithm>
-#include <utility>
-#include <span>
-#include <ranges>
-#include <string_view>
-#include <exception>
-#include <stdexcept>
-#include <memory>
-#include <type_traits>
+#include <atomic>
+#include <atomic>
 #include <concepts>
-#include <variant>
-#include <functional>
-#include <mutex>
-#include <atomic>
-#include <shared_mutex>
-#include <format>
-#include <coroutine>
-#include <iostream>
 #include <condition_variable>
-#include <source_location>
-#include <atomic>
+#include <coroutine>
+#include <exception>
+#include <format>
+#include <functional>
+#include <iostream>
 #include <memory>
+#include <memory>
+#include <mutex>
+#include <ranges>
+#include <shared_mutex>
+#include <source_location>
+#include <span>
+#include <stdexcept>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+#include <variant>
 #endif
 
 export module shion:coro;

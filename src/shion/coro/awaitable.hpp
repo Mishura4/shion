@@ -2,8 +2,6 @@
 
 #include <shion/common/defines.hpp>
 
-#include "awaitable.hpp"
-
 #if !SHION_BUILDING_MODULES
 #  include <iostream>
 #  include <mutex>
@@ -110,6 +108,7 @@ struct promise_traits<T>
 template <typename Ref, typename PromiseAccessor>
 class basic_awaitable : protected detail::coro::promise_state_accessor<PromiseAccessor>
 {
+protected:
 	template <typename T>
 	using internal_reference = decltype(std::declval<T>().get_promise_state().get_value());
 	using state_holder = std::remove_cvref_t<PromiseAccessor>;

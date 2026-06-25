@@ -35,24 +35,34 @@ SHION_EXPORT template <typename Controller, typename Ref, typename Value, typena
 class basic_coro_promise;
 
 SHION_EXPORT template <typename Controller>
-struct suspend_and_continue
+class suspend_and_continue
 {
-	Controller* self;
-
+public:
 	constexpr suspend_and_continue(Controller& handler) noexcept : self(&handler)
 	{
+	}
+	
+	constexpr ~suspend_and_continue()
+	{
+		if (auto awaiter = self->release_awaiter())
+		{
+			awaiter.resume(); // terminates if it throws, intended
+		}
 	}
 
 	constexpr static bool await_ready() noexcept { return false; }
 	constexpr auto        await_suspend(detail::coro_handle<>) const noexcept -> detail::coro_handle<>
 	{
-		if (self->has_awaiter())
-			return self->release_awaiter();
+		if (auto awaiter = self->release_awaiter())
+			return awaiter;
 		else
 			return std::noop_coroutine();
 	}
 	constexpr static void await_resume() noexcept {}
 	constexpr static void finalize() noexcept {}
+
+private:
+	Controller* self;
 };
 
 SHION_EXPORT template <typename Ref, typename Value = void>
@@ -371,7 +381,7 @@ struct inert_controller
 	constexpr static auto acquire_set_value(auto&&...) -> inert_controller { return {}; }
 	constexpr static auto acquire_set_carry(auto&&...) -> inert_controller { return {}; }
 	constexpr static void finalize() noexcept {}
-	constexpr static bool await_ready() noexcept { return false; }
+	constexpr static bool await_ready() noexcept { return true; }
 	constexpr static void await_suspend(std::coroutine_handle<>) noexcept {}
 	constexpr static void await_resume() noexcept {}
 };
@@ -392,7 +402,8 @@ public:
 
 	constexpr auto await(coro_handle<> suspended_coroutine) noexcept -> coro_handle<>
 	{
-		return std::exchange(awaiter, suspended_coroutine);
+		auto prev = std::exchange(awaiter, suspended_coroutine);
+		return prev == nullptr ? std::noop_coroutine() : prev;
 	}
 
 	constexpr auto release_awaiter(coro_handle<> exchange = {}) noexcept -> detail::std_coroutine::coroutine_handle<>
@@ -423,14 +434,14 @@ public:
 		return false;
 	}
 	
-	constexpr auto acquire_set_carry(auto&&...) noexcept -> shion::coro::suspend_and_continue<simple_continuation_controller>
+	constexpr auto acquire_set_carry(auto&&...) noexcept -> suspend_and_continue<simple_continuation_controller>
 	{
 		return { *this };
 	}
 	
-	static constexpr auto acquire_set_value(auto&&...) noexcept -> inert_controller
+	constexpr auto acquire_set_value(auto&&...) noexcept -> suspend_and_continue<simple_continuation_controller>
 	{
-		return {};
+		return { *this };
 	}
 
 	constexpr bool has_awaiter() const noexcept
@@ -449,7 +460,7 @@ public:
 	}
 };
 
-class atomic_coro_handler : protected simple_continuation_controller
+class atomic_continuation_controller : protected simple_continuation_controller
 {
 protected:
 	using flags = detail::coro::state_flags;
@@ -469,8 +480,10 @@ public:
 			throw logic_exception("awaitable is already being awaited");
 		}
 		// TODO: RACE CONDITION ON AWAITER?
-		auto ret = simple_continuation_controller::await(handle);
-		return (previous_flags & flags::sf_ready) ? handle : ret;
+		if (previous_flags & flags::sf_ready) [[unlikely]] {
+			return handle;
+		}
+		return simple_continuation_controller::await(handle);
 	}
 
 	/**
@@ -519,6 +532,53 @@ public:
 	{
 		return state.load(order) & flags::sf_done;
 	}
+	
+	constexpr auto acquire_set_carry(auto&&...) noexcept -> suspend_and_continue<simple_continuation_controller>
+	{
+		return { *this };
+	}
+	
+	class set_value
+	{
+	public:
+		constexpr set_value(atomic_continuation_controller& handler) noexcept : self(&handler)
+		{
+		}
+	
+		constexpr ~set_value()
+		{
+			finalize(); // terminates if resume throws, intended
+		}
+		
+		constexpr void finalize()
+		{
+			if (!self)
+				return;
+			
+			auto controller = std::exchange(self, nullptr);
+			auto prev = controller->state.fetch_or(flags::sf_ready, std::memory_order_acq_rel);
+			SHION_ASSERT(!(prev & flags::sf_ready));
+			if ((prev & flags::sf_awaited) == flags::sf_awaited) // we have an awaiter
+			{
+				if (auto handle = controller->release_awaiter())
+				{
+					handle.resume();
+				}
+				else
+				{
+					SHION_ASSERT(handle, "we have awaited in flags but no awaiter, something went very wrong");
+				}
+			}
+		}
+
+	private:
+		atomic_continuation_controller* self;
+	};
+	
+	constexpr auto acquire_set_value(auto&&...) noexcept -> set_value
+	{
+		return { *this };
+	}
 };
 
 template <typename T>
@@ -532,6 +592,18 @@ struct promise_state_accessor_base<T>
 	using propagate_type = promise_state_accessor_base<std::conditional_t<std::is_copy_constructible_v<T>, T, T&>>;
 
 	T state;
+	
+	constexpr promise_state_accessor_base() = default;
+	constexpr promise_state_accessor_base(const promise_state_accessor_base&) = default;
+	constexpr promise_state_accessor_base(promise_state_accessor_base&&) = default;
+	constexpr promise_state_accessor_base(T value) noexcept(std::is_nothrow_constructible_v<T>) requires (std::move_constructible<T>) :
+		state(std::move(value))
+	{
+	}
+	constexpr ~promise_state_accessor_base() = default;
+
+	constexpr auto operator=(const promise_state_accessor_base&) -> promise_state_accessor_base& = default;
+	constexpr auto operator=(promise_state_accessor_base&&) -> promise_state_accessor_base& = default;
 
 	constexpr bool is_valid_state() const noexcept
 	{
@@ -1013,7 +1085,7 @@ public:
 };
 
 template <typename Value, template <typename> typename StateHolder = std::shared_ptr>
-class async_promise : private basic_promise<detail::coro::atomic_coro_handler, Value, void, StateHolder>
+class async_promise : private basic_promise<detail::coro::atomic_continuation_controller, Value, void, StateHolder>
 {
 };
 

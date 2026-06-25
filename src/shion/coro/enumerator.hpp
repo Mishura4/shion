@@ -43,10 +43,13 @@ private:
 public:
 	using base::base;
 	using awaitable = basic_enumerator<Controller, Ref, Value>;
+	
+	static constexpr auto initial_suspend() noexcept -> std::suspend_always
+	{
+		return {};
+	}
 };
 
-#if defined(__clang__) && __clang_major__ < 23
-// Workaround https://github.com/llvm/llvm-project/issues/193412
 template <typename Controller, typename Ref, typename Value>
 class basic_enumerable_promise : public basic_enumerator_promise<
 	Controller, Ref, Value
@@ -60,11 +63,12 @@ public:
 	using awaitable = basic_enumerable<Controller, Ref, Value>;
 	
 	constexpr auto get_return_object() noexcept -> basic_enumerable<Controller, Ref, Value>;
+	
+	static constexpr auto initial_suspend() noexcept -> std::suspend_never
+	{
+		return {};
+	}
 };
-#else
-template <typename Controller, typename Ref, typename Value>
-using basic_enumerable_promise = basic_enumerator_promise<Controller, Ref, Value>;
-#endif
 
 }
 
@@ -73,6 +77,7 @@ namespace coro
 
 /**
  * @brief A coroutine that is also an <a href="https://en.cppreference.com/cpp/iterator/input_iterator">input iterator</a>.
+ * It starts BEFORE the first element, and needs to be incremented once before retrieving the first value.
  * 
  * @details Its main purpose is to <a href="https://en.wikipedia.org/wiki/Generator_(computer_programming)">generate values</a> as a range, similarly to C#'s <a href="https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.ienumerator-1?view=net-10.0">IEnumerator&lt;T&gt;</a>.
  */
@@ -118,12 +123,17 @@ public:
 		return awaitable{ this->get_promise_state() };
 	}
 
-	constexpr auto operator++() -> basic_enumerator&
+	constexpr auto operator++() & -> basic_enumerator&
 	{
 		SHION_ASSERT(valid());
 		SHION_ASSERT(!this->done());
 		this->get_coroutine_handle().resume();
 		return *this;
+	}
+
+	[[nodiscard]] constexpr auto operator++() && -> basic_enumerator
+	{
+		return std::move(++(*this));
 	}
 
 	constexpr void operator++(int)
@@ -134,6 +144,7 @@ public:
 	constexpr auto operator*() const& noexcept -> reference
 	{
 		SHION_ASSERT(valid());
+		SHION_ASSERT(this->get_promise_state().has_carry(), "enumerator must have enumerated a value (forgot ++?)");
 		return static_cast<reference>(this->get_promise_state().get_carry());
 	}
 
@@ -167,6 +178,7 @@ public:
 	friend constexpr auto iter_move(const basic_enumerator& e) noexcept -> rvalue_reference
 	{
 		SHION_ASSERT(e.valid());
+		SHION_ASSERT(e.get_promise_state().has_carry(), "enumerator must have enumerated a value (forgot ++?)");
 		return static_cast<rvalue_reference>(std::move(e.get_promise_state()).get_carry());
 	}
 };
@@ -215,14 +227,12 @@ private:
 	iterator_type _coroutine{};
 };
 
-#if defined(__clang__) && __clang_major__ < 23
 template <typename Controller, typename Ref, typename Value>
 constexpr auto basic_enumerable_promise<Controller, Ref, Value>::get_return_object() noexcept -> basic_enumerable<Controller, Ref, Value>
 {
 	using handle_t = detail::coro_handle<basic_enumerator_promise<Controller, Ref, Value>>;
 	return basic_enumerable<Controller, Ref, Value>{ handle_t::from_promise(*this) };
 }
-#endif
 
 }
 
