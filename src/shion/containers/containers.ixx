@@ -24,6 +24,7 @@ module;
 #include <unordered_set>
 #include <unordered_map>
 #include <source_location>
+#include <coroutine>
 #if defined(__cpp_lib_generator) && __cpp_lib_generator >= 202207L
 #include <generator>
 #endif

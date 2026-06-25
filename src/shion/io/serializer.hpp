@@ -4,12 +4,23 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-#	include <shion/utility/tuple.hpp>
-#	include <shion/common/common.hpp>
-
-#	include <tuple>
-#	include <ranges>
+#	include <algorithm>
+#	include <array>
+#	include <bit>
+#	include <climits>
 #	include <concepts>
+#	include <cstddef>
+#	include <cstring>
+#	include <initializer_list>
+#	include <iterator>
+#	include <memory>
+#	include <ranges>
+#	include <span>
+#	include <type_traits>
+#	include <utility>
+
+#	include <shion/common/common.hpp>
+#	include <shion/utility/tuple.hpp>
 #endif
 
 namespace SHION_NAMESPACE

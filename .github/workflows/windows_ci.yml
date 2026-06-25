@@ -7,10 +7,10 @@ on:
         default: x64
       os:
         type: string
-        default: windows-2022
+        default: windows-2025-vs2026
       compiler:
         type: string
-        default: vs2022
+        default: vs2026
       generator:
         type: string
         default: Ninja
@@ -34,10 +34,10 @@ on:
         default: x64
       os:
         type: string
-        default: windows-2022
+        default: windows-2025-vs2026
       compiler:
         type: string
-        default: vs2022
+        default: vs2026
       generator:
         type: string
         default: Ninja
@@ -81,14 +81,11 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
-      - name: Install CMake
-        id: install-cmake
-        uses: ./.github/actions/install-cmake
-        with:
-          version: 4.0.0-rc4
-
       - name: Generate CMake
-        run: cmake . -B build -G "${{ inputs.generator }}" -DCMAKE_BUILD_TYPE=${{ inputs.build }} ${{ inputs.cmake-flags }}
+        shell: bash
+        run: |
+          BUILD_TYPE="${{ inputs.build }}"
+          cmake . -B build -G "${{ inputs.generator }}" -DCMAKE_BUILD_TYPE=${{ inputs.build }} ${{ inputs.cmake-flags }} -DSHION_BUILD_MODULES=off -DSHION_BUILD_TESTS=off
 
       - name: Build Project
         run: cmake --build build --parallel 4

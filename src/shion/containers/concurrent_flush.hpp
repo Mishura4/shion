@@ -8,10 +8,10 @@
 #include <shion/common/defines.hpp>
 
 #if !SHION_BUILDING_MODULES
-
 #include <type_traits>
 #include <bit>
 #include <list>
+#include <coroutine>
 
 #include <shion/meta/macros.hpp>
 #include <shion/common.hpp>
@@ -19,7 +19,6 @@
 #include <shion/meta/type_traits.hpp>
 #include <shion/utility/optional.hpp>
 #include <shion/coro/enumerator.hpp>
-
 #endif
 
 namespace SHION_NAMESPACE

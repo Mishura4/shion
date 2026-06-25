@@ -13,7 +13,3 @@
 #include "coro/state_machine.hpp"
 #include "coro/event_hook.hpp"
 */
-#if defined(__RESHARPER__)
-#include <type_traits>
-#include <utility>
-#endif

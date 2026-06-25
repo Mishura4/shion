@@ -25,10 +25,16 @@
 namespace SHION_NAMESPACE
 {
 
+SHION_EXPORT template <typename Controller, typename Value, typename Carry, template <typename> typename StateHolder = std::in_place_type_t>
+struct basic_promise;
+
 namespace coro
 {
 
-template <typename Controller>
+SHION_EXPORT template <typename Controller, typename Ref, typename Value, typename YieldRef = void, typename YieldValue = void>
+class basic_coro_promise;
+
+SHION_EXPORT template <typename Controller>
 struct suspend_and_continue
 {
 	Controller* self;
@@ -783,7 +789,7 @@ public:
 
 }
 
-template <typename Controller, typename Value, typename Carry, template <typename> typename StateHolder = std::in_place_type_t>
+template <typename Controller, typename Value, typename Carry, template <typename> typename StateHolder>
 struct basic_promise : protected detail::coro::promise_state_accessor<StateHolder<detail::coro::promise_state<Controller, Value, Carry>>>
 {
 public:
@@ -975,7 +981,7 @@ public:
 namespace coro
 {
 
-template <typename Controller, typename Ref, typename Value, typename YieldRef = void, typename YieldValue = void>
+template <typename Controller, typename Ref, typename Value, typename YieldRef, typename YieldValue>
 class basic_coro_promise : public detail::coro::basic_coro_promise_yield<
 	Controller, Ref, Value, YieldRef, YieldValue
 >
@@ -986,6 +992,7 @@ private:
 	>;
 
 public:
+	using base::base;
 	using base::get_promise_state;
 	using typename base::value_type;
 	using awaitable = co_awaitable<Ref, Value>;
