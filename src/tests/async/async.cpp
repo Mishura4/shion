@@ -15,6 +15,10 @@ module;
 #include <ranges>
 #include <vector>
 #include <functional>
+#include <chrono>
+#include <thread>
+#include <future>
+#include <atomic>
 #endif
 
 #include "../tests.hpp"
@@ -26,6 +30,8 @@ import std;
 #endif
 
 import shion;
+
+using namespace std::chrono_literals;
 
 namespace shion
 {
